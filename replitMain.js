@@ -10,10 +10,34 @@ define([
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Load D3.js library
-    if (!window.d3) {
-        $('<script>').attr('src', 'https://d3js.org/d3.v7.min.js').appendTo('head');
-    }
+    // Load D3.js library with better error handling
+    const loadD3 = () => {
+        return new Promise((resolve, reject) => {
+            if (window.d3 && typeof window.d3.scaleBand === 'function') {
+                console.log('D3.js already loaded');
+                resolve();
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = 'https://d3js.org/d3.v7.min.js';
+            script.onload = function() {
+                console.log('D3.js loaded successfully, version:', d3.version);
+                console.log('scaleBand function available:', typeof d3.scaleBand);
+                resolve();
+            };
+            script.onerror = function() {
+                console.error('Failed to load D3.js from CDN');
+                reject(new Error('D3.js failed to load'));
+            };
+            document.head.appendChild(script);
+        });
+    };
+    
+    // Initialize D3.js loading
+    loadD3().catch(error => {
+        console.error('D3.js initialization failed:', error);
+    });
 
     return {
         template: template,
@@ -447,13 +471,36 @@ define([
                 // Add loading state
                 container.innerHTML = '<div class="chart-loading">Generating D3.js chart...</div>';
                 
-                // Wait for D3.js to load
-                const initChart = () => {
-                    if (typeof d3 === 'undefined') {
+                // Wait for D3.js to load with timeout and better error handling
+                let loadAttempts = 0;
+                const maxAttempts = 100; // 10 seconds timeout
+                
+                const initChart = async () => {
+                    loadAttempts++;
+                    
+                    // Try to ensure D3.js is loaded
+                    try {
+                        await loadD3();
+                    } catch (error) {
+                        console.error('Failed to load D3.js:', error);
+                    }
+                    
+                    if (typeof d3 === 'undefined' || typeof d3.scaleBand !== 'function') {
+                        if (loadAttempts >= maxAttempts) {
+                            console.error('D3.js failed to load within timeout');
+                            container.innerHTML = '<div class="chart-error">D3.js library failed to load. Please refresh the page and try again.<br><small>Error: scaleBand function not available</small></div>';
+                            return;
+                        }
+                        console.log(`D3.js not loaded yet, waiting... (attempt ${loadAttempts}/${maxAttempts})`);
                         setTimeout(initChart, 100);
                         return;
                     }
 
+                    // Debug D3.js availability
+                    console.log('D3.js version:', d3.version);
+                    console.log('D3.js scaleBand available:', typeof d3.scaleBand);
+                    console.log('Available D3 functions:', Object.keys(d3).filter(key => key.startsWith('scale')));
+                    
                     container.innerHTML = '';
                     
                     const { chartType, chartData: data, chartConfig } = chartData;
@@ -532,11 +579,18 @@ define([
                 const g = svg.append("g")
                     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-                // Scales
-                const xScale = d3.scaleBand()
-                    .domain(data.map(d => d.label))
-                    .range([0, innerWidth])
-                    .padding(0.1);
+                // Scales - with fallback for compatibility
+                let xScale;
+                try {
+                    xScale = d3.scaleBand()
+                        .domain(data.map(d => d.label))
+                        .range([0, innerWidth])
+                        .padding(0.1);
+                } catch (error) {
+                    console.error('scaleBand error:', error);
+                    console.log('Available D3 scale functions:', Object.keys(d3).filter(key => key.includes('scale')));
+                    throw new Error('D3.js scaleBand function not available');
+                }
 
                 const yScale = d3.scaleLinear()
                     .domain([0, d3.max(data, d => d.value)])
