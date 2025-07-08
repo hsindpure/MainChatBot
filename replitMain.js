@@ -10,66 +10,64 @@ define([
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Load D3.js library with multiple fallback URLs and better error handling
-    const loadD3 = () => {
+    // Load ApexCharts library with fallback URLs and better error handling
+    const loadApexCharts = () => {
         return new Promise((resolve, reject) => {
-            if (window.d3 && typeof window.d3.scaleBand === 'function') {
-                console.log('D3.js already loaded and functional');
+            if (window.ApexCharts && typeof window.ApexCharts === 'function') {
+                console.log('ApexCharts already loaded and functional');
                 resolve();
                 return;
             }
             
-            // Try different D3.js versions and CDNs
-            const d3Sources = [
-                'https://cdn.jsdelivr.net/npm/d3@7',
-                'https://d3js.org/d3.v7.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js',
-                'https://unpkg.com/d3@7'
+            // Try different ApexCharts CDNs
+            const apexSources = [
+                'https://cdn.jsdelivr.net/npm/apexcharts@latest',
+                'https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.44.0/apexcharts.min.js',
+                'https://unpkg.com/apexcharts@latest'
             ];
             
             let currentIndex = 0;
             
-            const tryLoadD3 = () => {
-                if (currentIndex >= d3Sources.length) {
-                    reject(new Error('All D3.js sources failed to load'));
+            const tryLoadApex = () => {
+                if (currentIndex >= apexSources.length) {
+                    reject(new Error('All ApexCharts sources failed to load'));
                     return;
                 }
                 
                 const script = document.createElement('script');
-                script.src = d3Sources[currentIndex];
+                script.src = apexSources[currentIndex];
                 
                 script.onload = function() {
                     // Wait a bit for the script to initialize
                     setTimeout(() => {
-                        if (window.d3 && typeof window.d3.scaleBand === 'function') {
-                            console.log('D3.js loaded successfully from:', d3Sources[currentIndex]);
-                            console.log('D3.js version:', d3.version);
-                            console.log('scaleBand function available:', typeof d3.scaleBand);
+                        if (window.ApexCharts && typeof window.ApexCharts === 'function') {
+                            console.log('ApexCharts loaded successfully from:', apexSources[currentIndex]);
+                            console.log('ApexCharts available:', typeof ApexCharts);
                             resolve();
                         } else {
-                            console.warn('D3.js loaded but scaleBand not available from:', d3Sources[currentIndex]);
+                            console.warn('ApexCharts loaded but not available from:', apexSources[currentIndex]);
                             currentIndex++;
-                            tryLoadD3();
+                            tryLoadApex();
                         }
                     }, 100);
                 };
                 
                 script.onerror = function() {
-                    console.error('Failed to load D3.js from:', d3Sources[currentIndex]);
+                    console.error('Failed to load ApexCharts from:', apexSources[currentIndex]);
                     currentIndex++;
-                    tryLoadD3();
+                    tryLoadApex();
                 };
                 
                 document.head.appendChild(script);
             };
             
-            tryLoadD3();
+            tryLoadApex();
         });
     };
     
-    // Initialize D3.js loading
-    loadD3().catch(error => {
-        console.error('D3.js initialization failed:', error);
+    // Initialize ApexCharts loading
+    loadApexCharts().catch(error => {
+        console.error('ApexCharts initialization failed:', error);
     });
 
     return {
@@ -481,7 +479,7 @@ define([
                 // Generate chart if chartData is provided
                 if (chartData) {
                     setTimeout(() => {
-                        generateD3Chart(`chart_${messageId}`, chartData);
+                        generateApexChart(`chart_${messageId}`, chartData);
                     }, 100);
                 }
 
@@ -494,7 +492,7 @@ define([
                 });
             }
 
-            function generateD3Chart(containerId, chartData) {
+            function generateApexChart(containerId, chartData) {
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
@@ -502,108 +500,98 @@ define([
                 }
 
                 // Add loading state
-                container.innerHTML = '<div class="chart-loading">Generating D3.js chart...</div>';
+                container.innerHTML = '<div class="chart-loading">Generating ApexCharts chart...</div>';
                 
-                // Wait for D3.js to load with timeout and better error handling
+                // Wait for ApexCharts to load with timeout and better error handling
                 let loadAttempts = 0;
-                const maxAttempts = 100; // 10 seconds timeout
+                const maxAttempts = 50; // 5 seconds timeout
                 
                 const initChart = async () => {
                     loadAttempts++;
                     
-                    // Try to ensure D3.js is loaded
+                    // Try to ensure ApexCharts is loaded
                     try {
-                        await loadD3();
-                        console.log('D3.js loading attempt completed');
+                        await loadApexCharts();
+                        console.log('ApexCharts loading attempt completed');
                     } catch (error) {
-                        console.error('Failed to load D3.js:', error);
+                        console.error('Failed to load ApexCharts:', error);
                     }
                     
-                    // Check if D3.js is properly loaded
-                    if (typeof d3 === 'undefined' || typeof d3.scaleBand !== 'function') {
+                    // Check if ApexCharts is properly loaded
+                    if (typeof ApexCharts === 'undefined' || typeof ApexCharts !== 'function') {
                         if (loadAttempts >= maxAttempts) {
-                            console.error('D3.js failed to load within timeout');
-                            console.log('D3.js available:', typeof d3);
-                            console.log('scaleBand available:', typeof d3?.scaleBand);
-                            console.log('Available D3 properties:', d3 ? Object.keys(d3).slice(0, 10) : 'None');
+                            console.error('ApexCharts failed to load within timeout');
+                            console.log('ApexCharts available:', typeof ApexCharts);
                             
                             // Fallback to simple HTML chart
                             generateFallbackChart(container, chartData);
                             return;
                         }
-                        console.log(`D3.js not loaded yet, waiting... (attempt ${loadAttempts}/${maxAttempts})`);
+                        console.log(`ApexCharts not loaded yet, waiting... (attempt ${loadAttempts}/${maxAttempts})`);
                         setTimeout(initChart, 200);
                         return;
                     }
 
-                    // Debug D3.js availability
-                    console.log('D3.js version:', d3.version);
-                    console.log('D3.js scaleBand available:', typeof d3.scaleBand);
-                    console.log('Available D3 functions:', Object.keys(d3).filter(key => key.startsWith('scale')));
+                    // Debug ApexCharts availability
+                    console.log('ApexCharts available:', typeof ApexCharts);
                     
                     container.innerHTML = '';
                     
-                    const { chartType, chartData: data, chartConfig } = chartData;
-                    const config = {
-                        width: 450,
-                        height: 300,
-                        margin: { top: 20, right: 20, bottom: 40, left: 40 },
-                        colorScheme: ["#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe", "#00f2fe"],
-                        ...chartConfig
-                    };
-
+                    const { type, data, title } = chartData;
+                    
                     try {
                         // Destroy existing chart if it exists
                         if (chartInstances[containerId]) {
-                            d3.select(`#${containerId}`).selectAll("*").remove();
+                            chartInstances[containerId].destroy();
                         }
 
-                        // Create SVG
-                        const svg = d3.select(`#${containerId}`)
-                            .append("svg")
-                            .attr("width", config.width)
-                            .attr("height", config.height)
-                            .style("background", "white")
-                            .style("border-radius", "8px");
+                        // Create chart container
+                        const chartContainer = document.createElement('div');
+                        chartContainer.id = containerId + '-apex';
+                        chartContainer.style.width = '100%';
+                        chartContainer.style.height = '400px';
+                        container.appendChild(chartContainer);
 
-                        // Add title if provided
-                        if (config.title) {
-                            svg.append("text")
-                                .attr("x", config.width / 2)
-                                .attr("y", config.margin.top / 2)
-                                .attr("text-anchor", "middle")
-                                .style("font-size", "16px")
-                                .style("font-weight", "bold")
-                                .style("fill", "#2d3748")
-                                .text(config.title);
-                        }
-
-                        // Generate chart based on type
-                        switch (chartType) {
+                        // Generate chart configuration based on type
+                        let chartConfig;
+                        switch (type) {
                             case 'bar':
-                                generateBarChart(svg, data, config, containerId);
+                                chartConfig = createBarChartConfig(data, title);
                                 break;
                             case 'line':
-                                generateLineChart(svg, data, config, containerId);
+                                chartConfig = createLineChartConfig(data, title);
                                 break;
                             case 'pie':
+                                chartConfig = createPieChartConfig(data, title);
+                                break;
                             case 'donut':
-                                generatePieChart(svg, data, config, containerId, chartType === 'donut');
+                                chartConfig = createDonutChartConfig(data, title);
                                 break;
                             case 'scatter':
-                                generateScatterChart(svg, data, config, containerId);
+                                chartConfig = createScatterChartConfig(data, title);
                                 break;
                             case 'area':
-                                generateAreaChart(svg, data, config, containerId);
+                                chartConfig = createAreaChartConfig(data, title);
                                 break;
                             default:
-                                generateBarChart(svg, data, config, containerId);
+                                chartConfig = createBarChartConfig(data, title);
                         }
 
-                        chartInstances[containerId] = { svg, data, config };
+                        // Create and render ApexCharts chart
+                        const chart = new ApexCharts(chartContainer, chartConfig);
+                        chart.render();
+
+                        // Store chart instance for cleanup
+                        chartInstances[containerId] = chart;
+
+                        // Add interactivity hint
+                        const hint = document.createElement('div');
+                        hint.className = 'chart-hint';
+                        hint.innerHTML = '💡 Click chart elements for detailed analysis';
+                        container.appendChild(hint);
                         
                     } catch (error) {
-                        console.error('Error creating D3 chart:', error);
+                        console.error('Error creating ApexCharts chart:', error);
                         container.innerHTML = '<div class="chart-error">Error generating chart. Please try again.</div>';
                     }
                 };
@@ -654,6 +642,325 @@ define([
                 chartHtml += '</div></div>';
                 
                 container.innerHTML = chartHtml;
+            }
+
+            // ApexCharts configuration functions
+            function createBarChartConfig(data, title) {
+                return {
+                    series: [{
+                        name: 'Values',
+                        data: data.map(item => ({
+                            x: item.label,
+                            y: item.value
+                        }))
+                    }],
+                    chart: {
+                        type: 'bar',
+                        height: 400,
+                        toolbar: {
+                            show: true,
+                            tools: {
+                                download: true,
+                                selection: true,
+                                zoom: true,
+                                zoomin: true,
+                                zoomout: true,
+                                pan: true,
+                                reset: true
+                            }
+                        },
+                        events: {
+                            dataPointSelection: function(event, chartContext, config) {
+                                const selectedData = data[config.dataPointIndex];
+                                console.log('Selected data point:', selectedData);
+                                // You can add more interactivity here
+                            }
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            columnWidth: '55%',
+                            endingShape: 'rounded'
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        show: true,
+                        width: 2,
+                        colors: ['transparent']
+                    },
+                    title: {
+                        text: title,
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'],
+                    xaxis: {
+                        categories: data.map(item => item.label)
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Value'
+                        }
+                    },
+                    fill: {
+                        opacity: 1
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return val
+                            }
+                        }
+                    }
+                };
+            }
+
+            function createLineChartConfig(data, title) {
+                return {
+                    series: [{
+                        name: 'Values',
+                        data: data.map(item => ({
+                            x: item.label,
+                            y: item.value
+                        }))
+                    }],
+                    chart: {
+                        type: 'line',
+                        height: 400,
+                        toolbar: {
+                            show: true
+                        },
+                        zoom: {
+                            enabled: true
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        width: 3
+                    },
+                    title: {
+                        text: title,
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    colors: ['#667eea'],
+                    markers: {
+                        size: 6,
+                        hover: {
+                            size: 8
+                        }
+                    },
+                    xaxis: {
+                        categories: data.map(item => item.label)
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Value'
+                        }
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return val
+                            }
+                        }
+                    }
+                };
+            }
+
+            function createPieChartConfig(data, title) {
+                return {
+                    series: data.map(item => item.value),
+                    chart: {
+                        type: 'pie',
+                        height: 400
+                    },
+                    labels: data.map(item => item.label),
+                    title: {
+                        text: title,
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'],
+                    responsive: [{
+                        breakpoint: 480,
+                        options: {
+                            chart: {
+                                width: 200
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }],
+                    legend: {
+                        position: 'bottom'
+                    }
+                };
+            }
+
+            function createDonutChartConfig(data, title) {
+                return {
+                    series: data.map(item => item.value),
+                    chart: {
+                        type: 'donut',
+                        height: 400
+                    },
+                    labels: data.map(item => item.label),
+                    title: {
+                        text: title,
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'],
+                    responsive: [{
+                        breakpoint: 480,
+                        options: {
+                            chart: {
+                                width: 200
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }],
+                    legend: {
+                        position: 'bottom'
+                    }
+                };
+            }
+
+            function createAreaChartConfig(data, title) {
+                return {
+                    series: [{
+                        name: 'Values',
+                        data: data.map(item => ({
+                            x: item.label,
+                            y: item.value
+                        }))
+                    }],
+                    chart: {
+                        type: 'area',
+                        height: 400,
+                        toolbar: {
+                            show: true
+                        },
+                        zoom: {
+                            enabled: true
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        width: 2
+                    },
+                    title: {
+                        text: title,
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    colors: ['#667eea'],
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shadeIntensity: 1,
+                            opacityFrom: 0.7,
+                            opacityTo: 0.9,
+                            stops: [0, 90, 100]
+                        }
+                    },
+                    xaxis: {
+                        categories: data.map(item => item.label)
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Value'
+                        }
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return val
+                            }
+                        }
+                    }
+                };
+            }
+
+            function createScatterChartConfig(data, title) {
+                return {
+                    series: [{
+                        name: 'Values',
+                        data: data.map((item, index) => ({
+                            x: index + 1,
+                            y: item.value
+                        }))
+                    }],
+                    chart: {
+                        type: 'scatter',
+                        height: 400,
+                        toolbar: {
+                            show: true
+                        },
+                        zoom: {
+                            enabled: true,
+                            type: 'xy'
+                        }
+                    },
+                    title: {
+                        text: title,
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    colors: ['#667eea'],
+                    markers: {
+                        size: 8
+                    },
+                    xaxis: {
+                        title: {
+                            text: 'Index'
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Value'
+                        }
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return val
+                            }
+                        }
+                    }
+                };
             }
 
             function generateBarChart(svg, data, config, containerId) {
