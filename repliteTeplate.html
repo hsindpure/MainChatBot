@@ -1,7 +1,6 @@
-
 <div class="qlik-chatbot-extension">
     <!-- Chatbot Toggle Button -->
-    <div class="chatbot-toggle" title="Open AI Assistant with Interactive Charts">
+    <div class="chatbot-toggle" title="Open AI Assistant">
         <div class="chatbot-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="currentColor"/>
@@ -49,17 +48,17 @@
                 <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Show me a summary of the data'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
                     📈 Data Summary
                 </button>
-                <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Create an interactive bar chart'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
-                    📊 Interactive Chart
-                </button>
-                <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Show me trends with drill-down capability'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
-                    🔍 Drill-down Analysis
-                </button>
-                <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Create a pie chart visualization'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
-                    🥧 Pie Chart
-                </button>
                 <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='What are the key insights?'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
                     💡 Key Insights
+                </button>
+                <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Create a chart showing trends'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
+                    📊 Create Chart
+                </button>
+                <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Show me a pie chart of the data'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
+                    🥧 Pie Chart
+                </button>
+                <button class="quick-action" onclick="this.closest('.qlik-chatbot-extension').querySelector('.chat-input').value='Display a bar chart'; this.closest('.qlik-chatbot-extension').querySelector('.send-button').click();">
+                    📊 Bar Chart
                 </button>
                 <button class="quick-action" ng-click="clearAllSelections()">
                     🗂️ Clear Filters
@@ -69,7 +68,7 @@
 
         <div class="chatbot-footer">
             <div class="input-container">
-                <input type="text" class="chat-input" placeholder="Ask me to create charts, visualizations, or drill down into your data..." maxlength="500">
+                <input type="text" class="chat-input" placeholder="Ask me anything about your data or request a chart..." maxlength="500">
                 <button class="voice-button" title="Voice Input">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 1C10.34 1 9 2.34 9 4V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V4C15 2.34 13.66 1 12 1Z" fill="currentColor"/>
@@ -85,7 +84,7 @@
                 </button>
             </div>
             <div class="footer-info">
-                <span class="powered-by">Powered by MMB Analytics with Interactive Charts</span>
+                <span class="powered-by">Powered by OpenAI & Highcharts</span>
             </div>
         </div>
     </div>
