@@ -10,17 +10,9 @@ define([
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Load Highcharts library
-    if (!window.Highcharts) {
-        const script = document.createElement('script');
-        script.src = 'https://code.highcharts.com/highcharts.js';
-        script.onload = function() {
-            // Load additional Highcharts modules
-            const drilldownScript = document.createElement('script');
-            drilldownScript.src = 'https://code.highcharts.com/modules/drilldown.js';
-            document.head.appendChild(drilldownScript);
-        };
-        document.head.appendChild(script);
+    // Load Chart.js library
+    if (!window.Chart) {
+        $('<script>').attr('src', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js').appendTo('head');
     }
 
     return {
@@ -39,10 +31,10 @@ define([
             let selectedRole = 'Analyst';
             let isListening = false;
             let recognition;
-            let chartCounter = 0;
+            let chartInstances = {}; // Track Chart.js instances for cleanup
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'visualize', 'graph', 'plot', 'display chart', 'generate chart'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -121,73 +113,71 @@ define([
                 });
             }
 
+            // Process object data
             const objects = $scope.$parent.layout.props.objects;
             console.log(objects);
-            
+
             const elements = objects.split(',').map(item => item.trim());
             const myArrayObjects = [];
-            
             elements.forEach(element => myArrayObjects.push(element));
 
             const fetchDataAndProcess = async (objectID) => {
                 const jsonDataArray = [];
               
                 try {
-                  const model = await app.getObject(objectID);
-                  const layout = model.layout;
-                  console.log(model);
+                    const model = await app.getObject(objectID);
+                    const layout = model.layout;
+                    console.log(model);
               
-                  if (!layout.qHyperCube) {
-                    return [];
-                  }
+                    if (!layout.qHyperCube) {
+                        return [];
+                    }
               
-                  const totalDimensions = layout.qHyperCube.qDimensionInfo.length;
-                  const totalMeasures = layout.qHyperCube.qMeasureInfo.length;
-                  const totalColumns = totalDimensions + totalMeasures;
+                    const totalDimensions = layout.qHyperCube.qDimensionInfo.length;
+                    const totalMeasures = layout.qHyperCube.qMeasureInfo.length;
+                    const totalColumns = totalDimensions + totalMeasures;
               
-                  if(totalColumns === 0) return [];
+                    if(totalColumns === 0) return [];
               
-                  const totalRows = layout.qHyperCube.qSize.qcy;
+                    const totalRows = layout.qHyperCube.qSize.qcy;
+                    const pageSize = 500;
+                    const totalPages = Math.min(Math.ceil(totalRows / pageSize), 5);
               
-                  const pageSize = 500;
-                  const totalPages = Math.min(Math.ceil(totalRows / pageSize), 5);
+                    const headers = layout.qHyperCube.qDimensionInfo
+                                    .map(d => d.qFallbackTitle)
+                                    .concat(layout.qHyperCube.qMeasureInfo.map(m => m.qFallbackTitle))
+                                    .filter(h => h !== undefined);
               
-                  const headers = layout.qHyperCube.qDimensionInfo
-                                  .map(d => d.qFallbackTitle)
-                                  .concat(layout.qHyperCube.qMeasureInfo.map(m => m.qFallbackTitle))
-                                  .filter(h => h !== undefined);
+                    for (let currentPage = 0; currentPage < totalPages; currentPage++) {
+                        const qTop = currentPage * pageSize;
+                        const qHeight = Math.min(pageSize, totalRows - qTop);
               
-                  for (let currentPage = 0; currentPage < totalPages; currentPage++) {
-                    const qTop = currentPage * pageSize;
-                    const qHeight = Math.min(pageSize, totalRows - qTop);
+                        if (qHeight <= 0) break;
               
-                    if (qHeight <= 0) break;
+                        const dataPages = await model.getHyperCubeData('/qHyperCubeDef', [{
+                            qTop,
+                            qLeft: 0,
+                            qWidth: totalColumns,
+                            qHeight
+                        }]);
               
-                    const dataPages = await model.getHyperCubeData('/qHyperCubeDef', [{
-                      qTop,
-                      qLeft: 0,
-                      qWidth: totalColumns,
-                      qHeight
-                    }]);
-              
-                    dataPages[0].qMatrix.forEach(data => {
-                      const jsonData = {};
-                      headers.forEach((header, index) => {
-                        jsonData[header] = data[index]?.qText || null;
-                      });
-                      jsonDataArray.push(jsonData);
-                    });
-                  }
+                        dataPages[0].qMatrix.forEach(data => {
+                            const jsonData = {};
+                            headers.forEach((header, index) => {
+                                jsonData[header] = data[index]?.qText || null;
+                            });
+                            jsonDataArray.push(jsonData);
+                        });
+                    }
                 } catch (error) {
-                  console.warn(`Error fetching data for object ${objectID}:`, error);
-                  return [];
+                    console.warn(`Error fetching data for object ${objectID}:`, error);
+                    return [];
                 }
                 return jsonDataArray;
             };
 
             let sursa = [];
             let allObjData = [];
-            
             myArrayObjects.forEach(function (objectID) {
                 fetchDataAndProcess(objectID).then(jsonDataArray => {
                     console.log(jsonDataArray);
@@ -195,7 +185,7 @@ define([
                     sursa = JSON.stringify(allObjData);
                     console.log("all Objects Data in string", sursa);
                 }).catch(error => {
-                    console.error("Error fetching and processing data:", error);
+                    console.error("Error fetching data:", error);
                 });
             });
 
@@ -241,7 +231,7 @@ define([
                 $downloadBtn.on('click', downloadChatHistory);
 
                 // Initialize with welcome message
-                addMessage('bot', `Hello! I'm your AI assistant for ${$scope.appName || 'this QlikSense app'}. I can help you analyze your data and create interactive charts. How can I help you today?`);
+                addMessage('bot', `Hello! I'm your AI assistant for ${$scope.appName || 'this QlikSense app'}. I can help you analyze your data and create interactive visualizations. Try asking me to "create a chart" or "show me a graph"!`);
             }
 
             function sendMessage() {
@@ -269,95 +259,102 @@ define([
             async function processWithAI(query) {
                 MainData.push(hypercubeData);
                 
-                const decryptedKey = process.env.OPENAI_API_KEY || "sk-your-api-key-here";
-                const baseUrl = "https://api.openai.com/v1/";
+                const decryptedKey = "openAI_Key";
+                const baseUrl = "openai/v1/";
                 
-                const isChartRequest = detectChartRequest(query);
+                let model;
+                let context = '4o';
+                if (context === '8k') {
+                    model = "mmc-tech";
+                } else if (context === '16k') {
+                    model = 'mmc-tech';
+                } else if (context === '4o') {
+                    model = "mmc-tech-gpt";
+                }
+
+                const endpoint = `deployments/${model}/chat/completions`;
+                const url = `${baseUrl}${endpoint}`;
+                const temp = 0.2;
                 
                 let Data = JSON.stringify(hypercubeData);
+                let prompt = `You are ${selectedRole}, a highly skilled data analyst. Utilize the JSON data provided below after 'data:', which includes information from QlikSense. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.`;
+
+                const isChartRequest = detectChartRequest(query);
                 
-                let prompt = `You are ${selectedRole}, a highly skilled business analyst. Utilize the JSON data provided below after 'data:', which includes information from the QlikSense application. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.`;
-
-                // Enhanced prompt for chart requests
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a highly skilled business analyst with expertise in data visualization. Analyze the provided JSON data and create an interactive chart configuration based on the user's request. 
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request. 
 
-                    IMPORTANT: If the user is asking for a chart, respond with ONLY a JSON object in this exact format:
+                    IMPORTANT: Respond with a JSON object containing:
+                    1. "message": A brief explanation of the chart
+                    2. "chartConfig": A complete Chart.js configuration object
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+                    
+                    The chartConfig should include:
+                    - type: chart type
+                    - data: with labels and datasets
+                    - options: with responsive design, plugins, and interactivity
+                    
+                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.
+                    
+                    Example format:
                     {
-                        "type": "chart",
-                        "chartType": "bar|line|pie|scatter|column",
-                        "title": "Chart Title",
-                        "xAxis": "field_name_for_x_axis",
-                        "yAxis": "field_name_for_y_axis",
-                        "series": [
-                            {
-                                "name": "Series Name",
-                                "data": [
-                                    {"name": "Category 1", "y": 100, "drilldown": "category1"},
-                                    {"name": "Category 2", "y": 200, "drilldown": "category2"}
-                                ]
+                        "message": "Here's a bar chart showing...",
+                        "chartConfig": {
+                            "type": "bar",
+                            "data": {
+                                "labels": ["Label1", "Label2"],
+                                "datasets": [{
+                                    "label": "Dataset Label",
+                                    "data": [10, 20],
+                                    "backgroundColor": ["#667eea", "#764ba2"]
+                                }]
+                            },
+                            "options": {
+                                "responsive": true,
+                                "plugins": {
+                                    "legend": {"display": true}
+                                },
+                                "onClick": true
                             }
-                        ],
-                        "drilldown": {
-                            "series": [
-                                {
-                                    "id": "category1",
-                                    "name": "Category 1 Details",
-                                    "data": [["Subcategory 1", 50], ["Subcategory 2", 50]]
-                                }
-                            ]
                         },
-                        "description": "Brief description of what the chart shows"
-                    }
-
-                    Use the actual field names and data from the provided dataset. If the data is not suitable for charting, respond with a regular text explanation instead.`;
+                        "chartType": "bar"
+                    }`;
                 }
 
-                // Update prompt based on selected role
                 switch (selectedRole) {
                     case 'Analyst':
-                        prompt += ' Focus on detailed data analysis, trends, and statistical insights.';
+                        prompt += ` As a skilled analyst, focus on data trends, patterns, and statistical insights.`;
                         break;
                     case 'HR':
-                        prompt += ' Focus on human resources metrics, employee data, and workforce analytics.';
+                        prompt += ` As an HR professional, emphasize employee-related insights, performance metrics, and organizational trends.`;
                         break;
                     case 'Manager':
-                        prompt += ' Focus on management KPIs, performance metrics, and strategic insights.';
+                        prompt += ` As a manager, provide strategic insights, performance summaries, and actionable recommendations.`;
                         break;
                     case 'Executive':
-                        prompt += ' Focus on high-level strategic insights, executive summaries, and key business metrics.';
+                        prompt += ` As an executive, focus on high-level strategic insights, KPIs, and business impact.`;
                         break;
                 }
 
-                const requestBody = {
-                    model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-                    messages: [
-                        {
-                            role: "system",
-                            content: prompt
-                        },
-                        {
-                            role: "user",
-                            content: `data: ${Data}\n\nquery: <${query}>`
-                        }
-                    ],
-                    max_tokens: 2000,
-                    temperature: 0.2
-                };
-
-                // Add JSON format requirement for chart requests
-                if (isChartRequest) {
-                    requestBody.response_format = { type: "json_object" };
-                }
+                prompt += `\n\nData: ${Data}\n\nQuery: <${query}>`;
 
                 try {
-                    const response = await fetch(`${baseUrl}chat/completions`, {
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${decryptedKey}`
                         },
-                        body: JSON.stringify(requestBody)
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [{
+                                role: "user",
+                                content: prompt
+                            }],
+                            temperature: temp,
+                            max_tokens: 2000,
+                            response_format: isChartRequest ? { type: "json_object" } : undefined
+                        })
                     });
 
                     if (!response.ok) {
@@ -369,194 +366,181 @@ define([
                     
                     hideTypingIndicator();
                     
-                    // Handle chart response
                     if (isChartRequest) {
                         try {
-                            const chartConfig = JSON.parse(aiResponse);
-                            if (chartConfig.type === 'chart') {
-                                addChartMessage('bot', chartConfig);
-                            } else {
-                                addMessage('bot', aiResponse);
-                            }
+                            const chartResponse = JSON.parse(aiResponse);
+                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig);
                         } catch (parseError) {
-                            console.error('Error parsing chart configuration:', parseError);
-                            addMessage('bot', aiResponse);
+                            console.error('Error parsing chart response:', parseError);
+                            addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
                         }
                     } else {
                         addMessage('bot', aiResponse);
                     }
                     
                 } catch (error) {
-                    console.error('Error calling OpenAI API:', error);
+                    console.error('Error calling AI API:', error);
                     hideTypingIndicator();
-                    addMessage('bot', 'I apologize, but I encountered an error while processing your request. Please try again.');
+                    addMessage('bot', 'I apologize, but I encountered an error processing your request. Please try again.');
                 }
             }
 
-            function addMessage(sender, message) {
+            function addMessage(sender, message, chartConfig = null) {
                 const $messages = $element.find('.chat-messages');
                 const timestamp = new Date().toLocaleTimeString();
-                const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const messageId = 'msg_' + Date.now();
                 
-                const messageHtml = `
-                    <div class="message ${sender}-message" id="${messageId}">
+                let messageClass = sender === 'user' ? 'user-message' : 'bot-message';
+                let icon = sender === 'user' ? '👤' : '🤖';
+                let name = sender === 'user' ? currentUser : 'AI Assistant';
+                
+                if (sender === 'system') {
+                    messageClass = 'system-message';
+                    icon = '⚙️';
+                    name = 'System';
+                }
+
+                let messageHtml = `
+                    <div class="message ${messageClass}" id="${messageId}">
                         <div class="message-content">
                             <div class="message-header">
-                                <span class="${sender}-icon">${sender === 'user' ? '👤' : '🤖'}</span>
-                                <span class="${sender}-name">${sender === 'user' ? currentUser : 'AI Assistant'}</span>
+                                <span class="${sender}-icon">${icon}</span>
+                                <span class="${sender}-name">${name}</span>
                                 <span class="timestamp">${timestamp}</span>
                             </div>
                             <div class="message-text">${message}</div>
-                            <div class="hear-responce">
-                                <button class="speak-button" onclick="speakMessage('${messageId}')">
+                            ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
+                            <div class="hear-responce ${sender}">
+                                <button class="speak-button" onclick="speakText('${message.replace(/'/g, "\\'")}')">
                                     <i class="fas fa-volume-up"></i>
                                 </button>
-                                <button class="copy-button" onclick="copyMessage('${messageId}')">
+                                <button class="copy-button" onclick="copyToClipboard('${message.replace(/'/g, "\\'")}')">
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 `;
-                
+
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
-                
+
+                // Generate chart if chartConfig is provided
+                if (chartConfig) {
+                    setTimeout(() => {
+                        generateChart(`chart_${messageId}`, chartConfig);
+                    }, 100);
+                }
+
                 // Add to chat history
                 chatHistory.push({
                     sender: sender,
                     message: message,
-                    timestamp: timestamp
-                });
-            }
-
-            function addChartMessage(sender, chartConfig) {
-                const $messages = $element.find('.chat-messages');
-                const timestamp = new Date().toLocaleTimeString();
-                const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                const chartId = `chart_${++chartCounter}`;
-                
-                const messageHtml = `
-                    <div class="message ${sender}-message chart-message" id="${messageId}">
-                        <div class="message-content">
-                            <div class="message-header">
-                                <span class="${sender}-icon">📊</span>
-                                <span class="${sender}-name">Chart Generator</span>
-                                <span class="timestamp">${timestamp}</span>
-                            </div>
-                            <div class="message-text">
-                                <div class="chart-description">${chartConfig.description || 'Interactive chart generated based on your data'}</div>
-                                <div class="chart-container" id="${chartId}">
-                                    <div class="chart-loading">
-                                        <div class="loading-spinner"></div>
-                                        <span>Generating chart...</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="hear-responce">
-                                <button class="copy-button" onclick="copyChartConfig('${messageId}')">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                $messages.append(messageHtml);
-                $messages.scrollTop($messages[0].scrollHeight);
-                
-                // Render chart after DOM is ready
-                setTimeout(() => {
-                    renderChart(chartId, chartConfig);
-                }, 100);
-                
-                // Add to chat history
-                chatHistory.push({
-                    sender: sender,
-                    message: `Chart: ${chartConfig.title}`,
                     timestamp: timestamp,
                     chartConfig: chartConfig
                 });
             }
 
-            function renderChart(containerId, chartConfig) {
+            function generateChart(containerId, chartConfig) {
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
-                // Check if Highcharts is loaded
-                if (typeof Highcharts === 'undefined') {
-                    container.innerHTML = '<div class="chart-error">Chart library not loaded. Please refresh the page.</div>';
-                    return;
-                }
+                // Create canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 300;
+                container.appendChild(canvas);
 
-                try {
-                    // Remove loading spinner
+                // Add loading state
+                container.innerHTML = '<div class="chart-loading">Generating chart...</div>';
+                
+                // Wait for Chart.js to load
+                const initChart = () => {
+                    if (typeof Chart === 'undefined') {
+                        setTimeout(initChart, 100);
+                        return;
+                    }
+
                     container.innerHTML = '';
+                    container.appendChild(canvas);
 
-                    // Create Highcharts configuration
-                    const highchartsConfig = {
-                        chart: {
-                            type: chartConfig.chartType || 'column',
-                            height: 300
-                        },
-                        title: {
-                            text: chartConfig.title
-                        },
-                        xAxis: {
-                            type: chartConfig.chartType === 'pie' ? undefined : 'category',
-                            title: {
-                                text: chartConfig.xAxis
-                            }
-                        },
-                        yAxis: {
-                            title: {
-                                text: chartConfig.yAxis
-                            }
-                        },
-                        series: chartConfig.series || [],
-                        drilldown: chartConfig.drilldown || {},
-                        responsive: {
-                            rules: [{
-                                condition: {
-                                    maxWidth: 500
+                    // Enhanced chart configuration with interactivity
+                    const enhancedConfig = {
+                        ...chartConfig,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                intersect: false,
+                                mode: 'index'
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
                                 },
-                                chartOptions: {
-                                    legend: {
-                                        enabled: false
-                                    }
+                                tooltip: {
+                                    enabled: true,
+                                    mode: 'index',
+                                    intersect: false
                                 }
-                            }]
-                        },
-                        credits: {
-                            enabled: false
+                            },
+                            onClick: (event, elements) => {
+                                if (elements.length > 0) {
+                                    const element = elements[0];
+                                    const dataIndex = element.index;
+                                    const label = chartConfig.data.labels[dataIndex];
+                                    const value = chartConfig.data.datasets[element.datasetIndex].data[dataIndex];
+                                    
+                                    // Create drilldown query
+                                    const drilldownQuery = `Tell me more about ${label} with value ${value}`;
+                                    
+                                    // Add drilldown message
+                                    addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                                    showTypingIndicator();
+                                    processWithAI(drilldownQuery);
+                                }
+                            },
+                            onHover: (event, elements) => {
+                                event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                            },
+                            ...chartConfig.options
                         }
                     };
 
-                    // Special handling for pie charts
-                    if (chartConfig.chartType === 'pie') {
-                        delete highchartsConfig.xAxis;
-                        delete highchartsConfig.yAxis;
-                        if (highchartsConfig.series[0]) {
-                            highchartsConfig.series[0].innerSize = '50%';
+                    try {
+                        // Destroy existing chart if it exists
+                        if (chartInstances[containerId]) {
+                            chartInstances[containerId].destroy();
                         }
+
+                        // Create new chart
+                        chartInstances[containerId] = new Chart(canvas, enhancedConfig);
+                        
+                        // Add resize observer for responsiveness
+                        const resizeObserver = new ResizeObserver(() => {
+                            if (chartInstances[containerId]) {
+                                chartInstances[containerId].resize();
+                            }
+                        });
+                        resizeObserver.observe(container);
+                        
+                    } catch (error) {
+                        console.error('Error creating chart:', error);
+                        container.innerHTML = '<div class="chart-error">Error generating chart. Please try again.</div>';
                     }
+                };
 
-                    // Create the chart
-                    Highcharts.chart(containerId, highchartsConfig);
-
-                } catch (error) {
-                    console.error('Error rendering chart:', error);
-                    container.innerHTML = '<div class="chart-error">Failed to render chart. Please try again.</div>';
-                }
+                initChart();
             }
 
             function showTypingIndicator() {
                 const $messages = $element.find('.chat-messages');
                 const typingHtml = `
-                    <div class="message bot-message typing-indicator">
+                    <div class="message typing-indicator">
                         <div class="message-content">
                             <div class="typing-animation">
                                 <span></span>
@@ -576,99 +560,89 @@ define([
 
             function toggleVoiceInput() {
                 if (!recognition) {
-                    addMessage('system', 'Voice input is not supported in this browser.');
+                    alert('Voice recognition is not supported in your browser.');
                     return;
                 }
 
+                const $voiceBtn = $element.find('.voice-button');
+                
                 if (isListening) {
                     recognition.stop();
                     isListening = false;
-                    $element.find('.voice-button').removeClass('listening');
+                    $voiceBtn.removeClass('listening');
                 } else {
                     recognition.start();
                     isListening = true;
-                    $element.find('.voice-button').addClass('listening');
+                    $voiceBtn.addClass('listening');
                 }
-            }
 
-            if (recognition) {
                 recognition.onresult = function(event) {
                     const transcript = event.results[0][0].transcript;
                     $element.find('.chat-input').val(transcript);
                     isListening = false;
-                    $element.find('.voice-button').removeClass('listening');
+                    $voiceBtn.removeClass('listening');
                 };
 
-                recognition.onerror = function() {
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
                     isListening = false;
-                    $element.find('.voice-button').removeClass('listening');
-                    addMessage('system', 'Voice recognition error. Please try again.');
+                    $voiceBtn.removeClass('listening');
                 };
             }
 
             function downloadChatHistory() {
-                if (chatHistory.length === 0) {
-                    addMessage('system', 'No chat history to download.');
-                    return;
-                }
-
-                const historyText = chatHistory.map(entry => 
-                    `[${entry.timestamp}] ${entry.sender}: ${entry.message}`
-                ).join('\n');
-
-                const blob = new Blob([historyText], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `chat_history_${new Date().toISOString().split('T')[0]}.txt`;
-                a.click();
-                URL.revokeObjectURL(url);
+                const dataStr = JSON.stringify(chatHistory, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `chat_history_${new Date().toISOString().split('T')[0]}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
             }
 
-            // Global functions for message interactions
-            window.speakMessage = function(messageId) {
-                const messageElement = document.getElementById(messageId);
-                if (messageElement && 'speechSynthesis' in window) {
-                    const text = messageElement.querySelector('.message-text').textContent;
+            // Global functions for message controls
+            window.speakText = function(text) {
+                if ('speechSynthesis' in window) {
                     const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.8;
+                    utterance.pitch = 1;
                     speechSynthesis.speak(utterance);
+                } else {
+                    alert('Text-to-speech is not supported in your browser.');
                 }
             };
 
-            window.copyMessage = function(messageId) {
-                const messageElement = document.getElementById(messageId);
-                if (messageElement) {
-                    const text = messageElement.querySelector('.message-text').textContent;
+            window.copyToClipboard = function(text) {
+                if (navigator.clipboard) {
                     navigator.clipboard.writeText(text).then(() => {
-                        // Visual feedback
-                        const button = messageElement.querySelector('.copy-button');
-                        const originalHTML = button.innerHTML;
-                        button.innerHTML = '<i class="fas fa-check"></i>';
-                        setTimeout(() => {
-                            button.innerHTML = originalHTML;
-                        }, 1000);
+                        // Show temporary feedback
+                        const feedback = document.createElement('div');
+                        feedback.textContent = 'Copied!';
+                        feedback.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; z-index: 10001;';
+                        document.body.appendChild(feedback);
+                        setTimeout(() => document.body.removeChild(feedback), 2000);
                     });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
                 }
             };
 
-            window.copyChartConfig = function(messageId) {
-                const messageElement = document.getElementById(messageId);
-                if (messageElement) {
-                    const chartEntry = chatHistory.find(entry => entry.chartConfig);
-                    if (chartEntry) {
-                        const configText = JSON.stringify(chartEntry.chartConfig, null, 2);
-                        navigator.clipboard.writeText(configText).then(() => {
-                            // Visual feedback
-                            const button = messageElement.querySelector('.copy-button');
-                            const originalHTML = button.innerHTML;
-                            button.innerHTML = '<i class="fas fa-check"></i>';
-                            setTimeout(() => {
-                                button.innerHTML = originalHTML;
-                            }, 1000);
-                        });
-                    }
-                }
-            };
+            // Cleanup function
+            $scope.$on('$destroy', function() {
+                // Destroy all chart instances
+                Object.values(chartInstances).forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                chartInstances = {};
+            });
         }]
     };
 });
