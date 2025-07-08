@@ -1,6 +1,6 @@
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
-/* QlikSense AI Chatbot Extension Styles with Interactive Charts */
+/* QlikSense AI Chatbot Extension Styles */
 .qlik-chatbot-extension {
     position: fixed;
     bottom: 20px;
@@ -333,125 +333,51 @@
     word-wrap: break-word;
 }
 
-/* Chart Container Styles */
-.chart-container {
-    margin: 15px 0;
+/* Chart-specific styles */
+.chart-message .message-content {
+    max-width: 95%;
+    background: white;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    background: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-    transition: all 0.3s ease;
+    padding: 16px;
 }
 
-.chart-container:hover {
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.chart-title {
-    font-weight: 600;
+.chart-description {
     font-size: 14px;
-    color: #2d3748;
-}
-
-.chart-controls {
-    display: flex;
-    gap: 8px;
-}
-
-.chart-export-btn,
-.chart-fullscreen-btn {
-    background: #667eea;
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    transition: all 0.2s ease;
-}
-
-.chart-export-btn:hover,
-.chart-fullscreen-btn:hover {
-    background: #5a67d8;
-    transform: translateY(-1px);
-}
-
-.chart-breadcrumb {
-    padding: 8px 16px;
-    background: #f7fafc;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.breadcrumb-item {
     color: #4a5568;
-    cursor: pointer;
-    transition: color 0.2s ease;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #f7fafc;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
 }
 
-.breadcrumb-item.active {
-    color: #667eea;
-    font-weight: 500;
-}
-
-.breadcrumb-item:hover:not(.active) {
-    color: #667eea;
-}
-
-.breadcrumb-separator {
-    color: #a0aec0;
-    margin: 0 4px;
-}
-
-.breadcrumb-back {
-    background: #667eea;
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: pointer;
-    margin-right: 8px;
-    transition: background 0.2s ease;
-}
-
-.breadcrumb-back:hover {
-    background: #5a67d8;
+.chart-container {
+    width: 100%;
+    min-height: 300px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
 }
 
 .chart-loading {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px;
-    color: #667eea;
-    font-size: 14px;
-    gap: 12px;
+    height: 300px;
+    color: #a0aec0;
 }
 
 .loading-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid #e2e8f0;
-    border-top: 2px solid #667eea;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    margin-bottom: 12px;
 }
 
 @keyframes spin {
@@ -459,47 +385,13 @@
     100% { transform: rotate(360deg); }
 }
 
-.chart-content {
-    padding: 12px;
-    background: white;
-    min-height: 400px;
-    position: relative;
-}
-
-.chart-fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10001;
-    width: 100vw !important;
-    height: 100vh !important;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.chart-fullscreen .chart-content {
-    height: calc(100vh - 120px);
-}
-
-.chart-fullscreen .chart-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.chart-fullscreen .chart-title {
-    color: white;
-}
-
-.chart-fullscreen .chart-export-btn,
-.chart-fullscreen .chart-fullscreen-btn {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.chart-fullscreen .chart-export-btn:hover,
-.chart-fullscreen .chart-fullscreen-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+.chart-error {
+    padding: 20px;
+    text-align: center;
+    color: #e53e3e;
+    background: #fed7d7;
+    border-radius: 6px;
+    margin: 10px 0;
 }
 
 /* Typing Indicator */
@@ -544,26 +436,24 @@
     border-top: 1px solid #e2e8f0;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 .quick-action {
     background: #f7fafc;
     border: 1px solid #e2e8f0;
     color: #4a5568;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 12px;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
 }
 
 .quick-action:hover {
     background: #667eea;
     color: white;
     border-color: #667eea;
-    transform: translateY(-1px);
 }
 
 /* Footer */
@@ -668,126 +558,108 @@
 .data-table td {
     padding: 8px 12px;
     border-bottom: 1px solid #e2e8f0;
-    color: #2d3748;
+    background: white;
 }
 
-.data-table tr:hover {
+.data-table tr:hover td {
     background: #f7fafc;
 }
 
-.data-table tr:last-child td {
-    border-bottom: none;
-}
-
-/* Chart Specific Styles */
-.highcharts-container {
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.highcharts-tooltip {
-    border-radius: 6px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-}
-
-.highcharts-drilldown-point {
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.highcharts-drilldown-point:hover {
-    transform: scale(1.05);
-}
-
-/* Chart.js Custom Styles */
-.chart-container canvas {
-    border-radius: 8px;
-}
-
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 600px) {
     .qlik-chatbot-extension {
         bottom: 10px;
         right: 10px;
+        left: 10px;
     }
     
     .chatbot-container {
-        width: 90vw;
-        height: 80vh;
-        right: 5vw;
-        bottom: 5vh;
+        width: 100%;
+        height: 500px;
+        right: 0;
+        left: 0;
     }
     
     .chart-container {
-        margin: 10px 0;
-    }
-    
-    .chart-content {
-        min-height: 300px;
+        min-height: 250px;
     }
     
     .quick-actions {
-        flex-direction: column;
-        gap: 6px;
+        padding: 8px 12px;
     }
     
     .quick-action {
-        width: 100%;
-        text-align: center;
+        font-size: 10px;
+        padding: 4px 8px;
     }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+@media (max-width: 400px) {
     .chatbot-container {
-        background: #1a202c;
-        color: #e2e8f0;
-    }
-    
-    .chat-messages {
-        background: #2d3748;
-    }
-    
-    .bot-message .message-content {
-        background: #4a5568;
-        color: #e2e8f0;
-        border-color: #4a5568;
+        height: 450px;
     }
     
     .chart-container {
-        background: #2d3748;
-        border-color: #4a5568;
-    }
-    
-    .chart-header {
-        background: #4a5568;
-        border-color: #4a5568;
-    }
-    
-    .chart-title {
-        color: #e2e8f0;
-    }
-    
-    .chart-breadcrumb {
-        background: #4a5568;
-        border-color: #4a5568;
-    }
-    
-    .breadcrumb-item {
-        color: #a0aec0;
-    }
-    
-    .breadcrumb-item.active {
-        color: #667eea;
+        min-height: 200px;
     }
 }
 
-/* Animation Classes */
-.chart-fade-in {
-    animation: chartFadeIn 0.5s ease-out;
+/* Highcharts specific styling */
+.highcharts-container {
+    font-family: inherit !important;
 }
 
-@keyframes chartFadeIn {
+.highcharts-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+.highcharts-subtitle {
+    font-size: 12px !important;
+}
+
+.highcharts-credits {
+    display: none !important;
+}
+
+/* Custom scrollbar for webkit browsers */
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* System message styles */
+.system-message .message-content {
+    background: #edf2f7;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    text-align: center;
+    max-width: 70%;
+    margin: 0 auto;
+}
+
+/* Animation for new messages */
+.message.new {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
     from {
         opacity: 0;
         transform: translateY(20px);
@@ -798,48 +670,53 @@
     }
 }
 
-.chart-zoom-in {
-    animation: chartZoomIn 0.3s ease-out;
+/* Chart interaction styles */
+.chart-container:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes chartZoomIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+/* Loading state improvements */
+.chart-loading span {
+    font-size: 14px;
+    color: #4a5568;
 }
 
-/* Accessibility Improvements */
-.chart-container:focus-within {
+/* Error state improvements */
+.chart-error {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Accessibility improvements */
+.quick-action:focus,
+.voice-button:focus,
+.send-button:focus,
+.chatbot-toggle:focus {
     outline: 2px solid #667eea;
     outline-offset: 2px;
 }
 
-.chart-export-btn:focus,
-.chart-fullscreen-btn:focus,
-.breadcrumb-back:focus {
-    outline: 2px solid #667eea;
-    outline-offset: 2px;
-}
-
-/* High Contrast Mode */
+/* High contrast mode support */
 @media (prefers-contrast: high) {
     .chatbot-container {
         border: 2px solid #000;
     }
     
-    .chart-container {
-        border: 2px solid #000;
-    }
-    
-    .chart-export-btn,
-    .chart-fullscreen-btn {
-        background: #000;
-        color: #fff;
+    .message-content {
+        border: 1px solid #000;
     }
 }
 
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .chatbot-toggle,
+    .pulse-ring,
+    .message,
+    .loading-spinner {
+        animation: none;
+    }
+    
+    .chatbot-container {
+        transition: none;
+    }
+}
