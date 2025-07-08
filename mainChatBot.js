@@ -319,10 +319,10 @@ const fetchDataAndProcess = async (objectID) => {
 				//console.log("data",hypercubeData);
 				//console.log("role",MainData);
 				
-				  const decryptedKey = "iIlAMndlLC6KyAnSNRBMAI6IAkToikpWf7wDCyi9tRNGIaHr";
+				  const decryptedKey = "openAI_Key";
  //   console.log("Decrypted Key:", decryptedKey);
 
-                const baseUrl = "https://stg1.mmc-dallas-int-non-prod-ingress.mgti.mmc.com/coreapi/openai/v1/";
+                const baseUrl = "openai/v1/";
 
 
  let model;
