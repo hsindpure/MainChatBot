@@ -10,9 +10,9 @@ define([
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Load Chart.js library
-    if (!window.Chart) {
-        $('<script>').attr('src', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js').appendTo('head');
+    // Load D3.js library
+    if (!window.d3) {
+        $('<script>').attr('src', 'https://d3js.org/d3.v7.min.js').appendTo('head');
     }
 
     return {
@@ -31,10 +31,10 @@ define([
             let selectedRole = 'Analyst';
             let isListening = false;
             let recognition;
-            let chartInstances = {}; // Track Chart.js instances for cleanup
+            let chartInstances = {}; // Track D3.js chart instances for cleanup
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'donut chart', 'area chart'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -282,42 +282,38 @@ define([
                 const isChartRequest = detectChartRequest(query);
                 
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request. 
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a D3.js chart configuration for the user's request. 
 
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
-                    2. "chartConfig": A complete Chart.js configuration object
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+                    2. "chartData": Processed data array ready for D3.js
+                    3. "chartType": The type of chart (bar, line, pie, scatter, donut, area, etc.)
+                    4. "chartConfig": Configuration object with chart settings
                     
-                    The chartConfig should include:
-                    - type: chart type
-                    - data: with labels and datasets
-                    - options: with responsive design, plugins, and interactivity
+                    The response should include:
+                    - chartType: one of "bar", "line", "pie", "scatter", "donut", "area"
+                    - chartData: array of objects with data points
+                    - chartConfig: settings like dimensions, colors, labels
                     
-                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.
+                    Use the actual data from the provided dataset. The chart will be interactive with hover effects and click handlers.
                     
                     Example format:
                     {
                         "message": "Here's a bar chart showing...",
+                        "chartType": "bar",
+                        "chartData": [
+                            {"label": "Category A", "value": 25, "color": "#667eea"},
+                            {"label": "Category B", "value": 30, "color": "#764ba2"}
+                        ],
                         "chartConfig": {
-                            "type": "bar",
-                            "data": {
-                                "labels": ["Label1", "Label2"],
-                                "datasets": [{
-                                    "label": "Dataset Label",
-                                    "data": [10, 20],
-                                    "backgroundColor": ["#667eea", "#764ba2"]
-                                }]
-                            },
-                            "options": {
-                                "responsive": true,
-                                "plugins": {
-                                    "legend": {"display": true}
-                                },
-                                "onClick": true
-                            }
-                        },
-                        "chartType": "bar"
+                            "width": 450,
+                            "height": 300,
+                            "margin": {"top": 20, "right": 20, "bottom": 40, "left": 40},
+                            "xLabel": "Categories",
+                            "yLabel": "Values",
+                            "title": "Chart Title",
+                            "colorScheme": ["#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe", "#00f2fe"]
+                        }
                     }`;
                 }
 
@@ -369,7 +365,7 @@ define([
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
-                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig);
+                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse);
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
                             addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
@@ -385,7 +381,7 @@ define([
                 }
             }
 
-            function addMessage(sender, message, chartConfig = null) {
+            function addMessage(sender, message, chartData = null) {
                 const $messages = $element.find('.chat-messages');
                 const timestamp = new Date().toLocaleTimeString();
                 const messageId = 'msg_' + Date.now();
@@ -409,7 +405,7 @@ define([
                                 <span class="timestamp">${timestamp}</span>
                             </div>
                             <div class="message-text">${message}</div>
-                            ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
+                            ${chartData ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
                             <div class="hear-responce ${sender}">
                                 <button class="speak-button" onclick="speakText('${message.replace(/'/g, "\\'")}')">
                                     <i class="fas fa-volume-up"></i>
@@ -425,10 +421,10 @@ define([
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
 
-                // Generate chart if chartConfig is provided
-                if (chartConfig) {
+                // Generate chart if chartData is provided
+                if (chartData) {
                     setTimeout(() => {
-                        generateChart(`chart_${messageId}`, chartConfig);
+                        generateD3Chart(`chart_${messageId}`, chartData);
                     }, 100);
                 }
 
@@ -437,104 +433,498 @@ define([
                     sender: sender,
                     message: message,
                     timestamp: timestamp,
-                    chartConfig: chartConfig
+                    chartData: chartData
                 });
             }
 
-            function generateChart(containerId, chartConfig) {
+            function generateD3Chart(containerId, chartData) {
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
-                // Create canvas element
-                const canvas = document.createElement('canvas');
-                canvas.width = 400;
-                canvas.height = 300;
-                container.appendChild(canvas);
-
                 // Add loading state
-                container.innerHTML = '<div class="chart-loading">Generating chart...</div>';
+                container.innerHTML = '<div class="chart-loading">Generating D3.js chart...</div>';
                 
-                // Wait for Chart.js to load
+                // Wait for D3.js to load
                 const initChart = () => {
-                    if (typeof Chart === 'undefined') {
+                    if (typeof d3 === 'undefined') {
                         setTimeout(initChart, 100);
                         return;
                     }
 
                     container.innerHTML = '';
-                    container.appendChild(canvas);
-
-                    // Enhanced chart configuration with interactivity
-                    const enhancedConfig = {
-                        ...chartConfig,
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: {
-                                intersect: false,
-                                mode: 'index'
-                            },
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top'
-                                },
-                                tooltip: {
-                                    enabled: true,
-                                    mode: 'index',
-                                    intersect: false
-                                }
-                            },
-                            onClick: (event, elements) => {
-                                if (elements.length > 0) {
-                                    const element = elements[0];
-                                    const dataIndex = element.index;
-                                    const label = chartConfig.data.labels[dataIndex];
-                                    const value = chartConfig.data.datasets[element.datasetIndex].data[dataIndex];
-                                    
-                                    // Create drilldown query
-                                    const drilldownQuery = `Tell me more about ${label} with value ${value}`;
-                                    
-                                    // Add drilldown message
-                                    addMessage('user', `[Drilldown] ${drilldownQuery}`);
-                                    showTypingIndicator();
-                                    processWithAI(drilldownQuery);
-                                }
-                            },
-                            onHover: (event, elements) => {
-                                event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                            },
-                            ...chartConfig.options
-                        }
+                    
+                    const { chartType, chartData: data, chartConfig } = chartData;
+                    const config = {
+                        width: 450,
+                        height: 300,
+                        margin: { top: 20, right: 20, bottom: 40, left: 40 },
+                        colorScheme: ["#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe", "#00f2fe"],
+                        ...chartConfig
                     };
 
                     try {
                         // Destroy existing chart if it exists
                         if (chartInstances[containerId]) {
-                            chartInstances[containerId].destroy();
+                            d3.select(`#${containerId}`).selectAll("*").remove();
                         }
 
-                        // Create new chart
-                        chartInstances[containerId] = new Chart(canvas, enhancedConfig);
-                        
-                        // Add resize observer for responsiveness
-                        const resizeObserver = new ResizeObserver(() => {
-                            if (chartInstances[containerId]) {
-                                chartInstances[containerId].resize();
-                            }
-                        });
-                        resizeObserver.observe(container);
+                        // Create SVG
+                        const svg = d3.select(`#${containerId}`)
+                            .append("svg")
+                            .attr("width", config.width)
+                            .attr("height", config.height)
+                            .style("background", "white")
+                            .style("border-radius", "8px");
+
+                        // Add title if provided
+                        if (config.title) {
+                            svg.append("text")
+                                .attr("x", config.width / 2)
+                                .attr("y", config.margin.top / 2)
+                                .attr("text-anchor", "middle")
+                                .style("font-size", "16px")
+                                .style("font-weight", "bold")
+                                .style("fill", "#2d3748")
+                                .text(config.title);
+                        }
+
+                        // Generate chart based on type
+                        switch (chartType) {
+                            case 'bar':
+                                generateBarChart(svg, data, config, containerId);
+                                break;
+                            case 'line':
+                                generateLineChart(svg, data, config, containerId);
+                                break;
+                            case 'pie':
+                            case 'donut':
+                                generatePieChart(svg, data, config, containerId, chartType === 'donut');
+                                break;
+                            case 'scatter':
+                                generateScatterChart(svg, data, config, containerId);
+                                break;
+                            case 'area':
+                                generateAreaChart(svg, data, config, containerId);
+                                break;
+                            default:
+                                generateBarChart(svg, data, config, containerId);
+                        }
+
+                        chartInstances[containerId] = { svg, data, config };
                         
                     } catch (error) {
-                        console.error('Error creating chart:', error);
+                        console.error('Error creating D3 chart:', error);
                         container.innerHTML = '<div class="chart-error">Error generating chart. Please try again.</div>';
                     }
                 };
 
                 initChart();
+            }
+
+            function generateBarChart(svg, data, config, containerId) {
+                const { width, height, margin, colorScheme } = config;
+                const innerWidth = width - margin.left - margin.right;
+                const innerHeight = height - margin.top - margin.bottom;
+
+                const g = svg.append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                // Scales
+                const xScale = d3.scaleBand()
+                    .domain(data.map(d => d.label))
+                    .range([0, innerWidth])
+                    .padding(0.1);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => d.value)])
+                    .range([innerHeight, 0]);
+
+                const colorScale = d3.scaleOrdinal()
+                    .domain(data.map(d => d.label))
+                    .range(colorScheme);
+
+                // Axes
+                g.append("g")
+                    .attr("transform", `translate(0,${innerHeight})`)
+                    .call(d3.axisBottom(xScale))
+                    .selectAll("text")
+                    .style("font-size", "12px");
+
+                g.append("g")
+                    .call(d3.axisLeft(yScale))
+                    .selectAll("text")
+                    .style("font-size", "12px");
+
+                // Bars
+                const bars = g.selectAll(".bar")
+                    .data(data)
+                    .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => xScale(d.label))
+                    .attr("width", xScale.bandwidth())
+                    .attr("y", d => yScale(d.value))
+                    .attr("height", d => innerHeight - yScale(d.value))
+                    .attr("fill", d => colorScale(d.label))
+                    .style("cursor", "pointer")
+                    .on("mouseover", function(event, d) {
+                        d3.select(this).attr("opacity", 0.8);
+                        
+                        // Tooltip
+                        const tooltip = d3.select("body").append("div")
+                            .attr("class", "d3-tooltip")
+                            .style("opacity", 0)
+                            .style("position", "absolute")
+                            .style("background", "rgba(0,0,0,0.8)")
+                            .style("color", "white")
+                            .style("padding", "8px")
+                            .style("border-radius", "4px")
+                            .style("font-size", "12px")
+                            .style("pointer-events", "none")
+                            .style("z-index", "10000");
+
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(`${d.label}: ${d.value}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        d3.select(this).attr("opacity", 1);
+                        d3.selectAll(".d3-tooltip").remove();
+                    })
+                    .on("click", function(event, d) {
+                        const drilldownQuery = `Tell me more about ${d.label} with value ${d.value}`;
+                        addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                        showTypingIndicator();
+                        processWithAI(drilldownQuery);
+                    });
+
+                // Add axis labels
+                if (config.xLabel) {
+                    g.append("text")
+                        .attr("x", innerWidth / 2)
+                        .attr("y", innerHeight + 35)
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "12px")
+                        .text(config.xLabel);
+                }
+
+                if (config.yLabel) {
+                    g.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 0 - margin.left)
+                        .attr("x", 0 - (innerHeight / 2))
+                        .attr("dy", "1em")
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "12px")
+                        .text(config.yLabel);
+                }
+            }
+
+            function generateLineChart(svg, data, config, containerId) {
+                const { width, height, margin, colorScheme } = config;
+                const innerWidth = width - margin.left - margin.right;
+                const innerHeight = height - margin.top - margin.bottom;
+
+                const g = svg.append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                // Scales
+                const xScale = d3.scalePoint()
+                    .domain(data.map(d => d.label))
+                    .range([0, innerWidth]);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => d.value)])
+                    .range([innerHeight, 0]);
+
+                // Line generator
+                const line = d3.line()
+                    .x(d => xScale(d.label))
+                    .y(d => yScale(d.value))
+                    .curve(d3.curveMonotoneX);
+
+                // Axes
+                g.append("g")
+                    .attr("transform", `translate(0,${innerHeight})`)
+                    .call(d3.axisBottom(xScale));
+
+                g.append("g")
+                    .call(d3.axisLeft(yScale));
+
+                // Line
+                g.append("path")
+                    .datum(data)
+                    .attr("fill", "none")
+                    .attr("stroke", colorScheme[0])
+                    .attr("stroke-width", 2)
+                    .attr("d", line);
+
+                // Points
+                g.selectAll(".dot")
+                    .data(data)
+                    .enter().append("circle")
+                    .attr("class", "dot")
+                    .attr("cx", d => xScale(d.label))
+                    .attr("cy", d => yScale(d.value))
+                    .attr("r", 4)
+                    .attr("fill", colorScheme[0])
+                    .style("cursor", "pointer")
+                    .on("mouseover", function(event, d) {
+                        d3.select(this).attr("r", 6);
+                        
+                        const tooltip = d3.select("body").append("div")
+                            .attr("class", "d3-tooltip")
+                            .style("opacity", 0)
+                            .style("position", "absolute")
+                            .style("background", "rgba(0,0,0,0.8)")
+                            .style("color", "white")
+                            .style("padding", "8px")
+                            .style("border-radius", "4px")
+                            .style("font-size", "12px")
+                            .style("pointer-events", "none")
+                            .style("z-index", "10000");
+
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(`${d.label}: ${d.value}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        d3.select(this).attr("r", 4);
+                        d3.selectAll(".d3-tooltip").remove();
+                    })
+                    .on("click", function(event, d) {
+                        const drilldownQuery = `Tell me more about ${d.label} with value ${d.value}`;
+                        addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                        showTypingIndicator();
+                        processWithAI(drilldownQuery);
+                    });
+            }
+
+            function generatePieChart(svg, data, config, containerId, isDonut = false) {
+                const { width, height, colorScheme } = config;
+                const radius = Math.min(width, height) / 2 - 20;
+                const innerRadius = isDonut ? radius * 0.5 : 0;
+
+                const g = svg.append("g")
+                    .attr("transform", `translate(${width/2},${height/2})`);
+
+                const pie = d3.pie()
+                    .value(d => d.value)
+                    .sort(null);
+
+                const path = d3.arc()
+                    .outerRadius(radius)
+                    .innerRadius(innerRadius);
+
+                const colorScale = d3.scaleOrdinal()
+                    .domain(data.map(d => d.label))
+                    .range(colorScheme);
+
+                const arcs = g.selectAll(".arc")
+                    .data(pie(data))
+                    .enter().append("g")
+                    .attr("class", "arc");
+
+                arcs.append("path")
+                    .attr("d", path)
+                    .attr("fill", d => colorScale(d.data.label))
+                    .style("cursor", "pointer")
+                    .on("mouseover", function(event, d) {
+                        d3.select(this).attr("opacity", 0.8);
+                        
+                        const tooltip = d3.select("body").append("div")
+                            .attr("class", "d3-tooltip")
+                            .style("opacity", 0)
+                            .style("position", "absolute")
+                            .style("background", "rgba(0,0,0,0.8)")
+                            .style("color", "white")
+                            .style("padding", "8px")
+                            .style("border-radius", "4px")
+                            .style("font-size", "12px")
+                            .style("pointer-events", "none")
+                            .style("z-index", "10000");
+
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(`${d.data.label}: ${d.data.value}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        d3.select(this).attr("opacity", 1);
+                        d3.selectAll(".d3-tooltip").remove();
+                    })
+                    .on("click", function(event, d) {
+                        const drilldownQuery = `Tell me more about ${d.data.label} with value ${d.data.value}`;
+                        addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                        showTypingIndicator();
+                        processWithAI(drilldownQuery);
+                    });
+
+                // Add labels
+                arcs.append("text")
+                    .attr("transform", d => `translate(${path.centroid(d)})`)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "12px")
+                    .style("fill", "white")
+                    .text(d => d.data.label);
+            }
+
+            function generateScatterChart(svg, data, config, containerId) {
+                const { width, height, margin, colorScheme } = config;
+                const innerWidth = width - margin.left - margin.right;
+                const innerHeight = height - margin.top - margin.bottom;
+
+                const g = svg.append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                // Scales (assuming data has x and y values)
+                const xScale = d3.scaleLinear()
+                    .domain(d3.extent(data, d => d.x || d.value))
+                    .range([0, innerWidth]);
+
+                const yScale = d3.scaleLinear()
+                    .domain(d3.extent(data, d => d.y || d.value))
+                    .range([innerHeight, 0]);
+
+                const colorScale = d3.scaleOrdinal()
+                    .domain(data.map(d => d.label))
+                    .range(colorScheme);
+
+                // Axes
+                g.append("g")
+                    .attr("transform", `translate(0,${innerHeight})`)
+                    .call(d3.axisBottom(xScale));
+
+                g.append("g")
+                    .call(d3.axisLeft(yScale));
+
+                // Points
+                g.selectAll(".dot")
+                    .data(data)
+                    .enter().append("circle")
+                    .attr("class", "dot")
+                    .attr("cx", d => xScale(d.x || d.value))
+                    .attr("cy", d => yScale(d.y || d.value))
+                    .attr("r", 5)
+                    .attr("fill", d => colorScale(d.label))
+                    .style("cursor", "pointer")
+                    .on("mouseover", function(event, d) {
+                        d3.select(this).attr("r", 7);
+                        
+                        const tooltip = d3.select("body").append("div")
+                            .attr("class", "d3-tooltip")
+                            .style("opacity", 0)
+                            .style("position", "absolute")
+                            .style("background", "rgba(0,0,0,0.8)")
+                            .style("color", "white")
+                            .style("padding", "8px")
+                            .style("border-radius", "4px")
+                            .style("font-size", "12px")
+                            .style("pointer-events", "none")
+                            .style("z-index", "10000");
+
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(`${d.label}: (${d.x || d.value}, ${d.y || d.value})`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        d3.select(this).attr("r", 5);
+                        d3.selectAll(".d3-tooltip").remove();
+                    })
+                    .on("click", function(event, d) {
+                        const drilldownQuery = `Tell me more about ${d.label}`;
+                        addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                        showTypingIndicator();
+                        processWithAI(drilldownQuery);
+                    });
+            }
+
+            function generateAreaChart(svg, data, config, containerId) {
+                const { width, height, margin, colorScheme } = config;
+                const innerWidth = width - margin.left - margin.right;
+                const innerHeight = height - margin.top - margin.bottom;
+
+                const g = svg.append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                // Scales
+                const xScale = d3.scalePoint()
+                    .domain(data.map(d => d.label))
+                    .range([0, innerWidth]);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => d.value)])
+                    .range([innerHeight, 0]);
+
+                // Area generator
+                const area = d3.area()
+                    .x(d => xScale(d.label))
+                    .y0(innerHeight)
+                    .y1(d => yScale(d.value))
+                    .curve(d3.curveMonotoneX);
+
+                // Axes
+                g.append("g")
+                    .attr("transform", `translate(0,${innerHeight})`)
+                    .call(d3.axisBottom(xScale));
+
+                g.append("g")
+                    .call(d3.axisLeft(yScale));
+
+                // Area
+                g.append("path")
+                    .datum(data)
+                    .attr("fill", colorScheme[0])
+                    .attr("fill-opacity", 0.7)
+                    .attr("stroke", colorScheme[0])
+                    .attr("stroke-width", 2)
+                    .attr("d", area);
+
+                // Points
+                g.selectAll(".dot")
+                    .data(data)
+                    .enter().append("circle")
+                    .attr("class", "dot")
+                    .attr("cx", d => xScale(d.label))
+                    .attr("cy", d => yScale(d.value))
+                    .attr("r", 4)
+                    .attr("fill", colorScheme[0])
+                    .style("cursor", "pointer")
+                    .on("mouseover", function(event, d) {
+                        d3.select(this).attr("r", 6);
+                        
+                        const tooltip = d3.select("body").append("div")
+                            .attr("class", "d3-tooltip")
+                            .style("opacity", 0)
+                            .style("position", "absolute")
+                            .style("background", "rgba(0,0,0,0.8)")
+                            .style("color", "white")
+                            .style("padding", "8px")
+                            .style("border-radius", "4px")
+                            .style("font-size", "12px")
+                            .style("pointer-events", "none")
+                            .style("z-index", "10000");
+
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(`${d.label}: ${d.value}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        d3.select(this).attr("r", 4);
+                        d3.selectAll(".d3-tooltip").remove();
+                    })
+                    .on("click", function(event, d) {
+                        const drilldownQuery = `Tell me more about ${d.label} with value ${d.value}`;
+                        addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                        showTypingIndicator();
+                        processWithAI(drilldownQuery);
+                    });
             }
 
             function showTypingIndicator() {
