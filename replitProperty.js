@@ -11,10 +11,10 @@ define([], function() {
                         defaultValue: true
                     },
                     title: {
-                        defaultValue: "AI Chatbot Assistant with Interactive Charts"
+                        defaultValue: "AI Chatbot Assistant with Charts"
                     },
                     subtitle: {
-                        defaultValue: "Powered by OpenAI with Highcharts Integration"
+                        defaultValue: "Powered by OpenAI & Highcharts"
                     }
                 }
             }
@@ -31,7 +31,7 @@ define([], function() {
                 items: {
                     objects: {
                         ref: "props.objects",
-                        label: "Enter Object Ids (comma-separated)",
+                        label: "Enter Object Ids (comma separated)",
                         type: "string",
                         expression: "optional"
                     },
@@ -56,17 +56,18 @@ define([], function() {
                         type: "string",
                         component: "dropdown",
                         options: [
+                            { value: "gpt-4o", label: "GPT-4o (Latest)" },
                             { value: "gpt-4", label: "GPT-4" },
                             { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
                             { value: "gpt-4-turbo", label: "GPT-4 Turbo" }
                         ],
-                        defaultValue: "gpt-3.5-turbo"
+                        defaultValue: "gpt-4o"
                     },
                     maxTokens: {
                         ref: "props.maxTokens",
                         label: "Max Response Tokens",
                         type: "number",
-                        defaultValue: 1500,
+                        defaultValue: 2000,
                         min: 100,
                         max: 4000
                     }
@@ -74,52 +75,24 @@ define([], function() {
             },
             chartSettings: {
                 type: "items",
-                label: "Interactive Chart Settings",
+                label: "Chart Configuration",
                 items: {
                     enableCharts: {
                         ref: "props.enableCharts",
-                        label: "Enable Interactive Charts",
+                        label: "Enable Chart Generation",
                         type: "boolean",
                         defaultValue: true
                     },
                     chartLibrary: {
                         ref: "props.chartLibrary",
-                        label: "Primary Chart Library",
+                        label: "Chart Library",
                         type: "string",
                         component: "dropdown",
                         options: [
-                            { value: "highcharts", label: "Highcharts (Recommended)" },
-                            { value: "chartjs", label: "Chart.js" },
-                            { value: "auto", label: "Auto-select" }
+                            { value: "highcharts", label: "Highcharts" },
+                            { value: "chartjs", label: "Chart.js" }
                         ],
                         defaultValue: "highcharts",
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
-                    },
-                    enableDrilldown: {
-                        ref: "props.enableDrilldown",
-                        label: "Enable Drill-down Functionality",
-                        type: "boolean",
-                        defaultValue: true,
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
-                    },
-                    chartAnimations: {
-                        ref: "props.chartAnimations",
-                        label: "Enable Chart Animations",
-                        type: "boolean",
-                        defaultValue: true,
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
-                    },
-                    chartExport: {
-                        ref: "props.chartExport",
-                        label: "Enable Chart Export",
-                        type: "boolean",
-                        defaultValue: true,
                         show: function(data) {
                             return data.props && data.props.enableCharts;
                         }
@@ -130,26 +103,33 @@ define([], function() {
                         type: "string",
                         component: "dropdown",
                         options: [
-                            { value: "bar", label: "Bar Chart" },
-                            { value: "line", label: "Line Chart" },
-                            { value: "pie", label: "Pie Chart" },
-                            { value: "scatter", label: "Scatter Plot" },
-                            { value: "area", label: "Area Chart" },
-                            { value: "treemap", label: "Treemap" },
-                            { value: "sunburst", label: "Sunburst" }
+                            { value: "column", label: "Column" },
+                            { value: "bar", label: "Bar" },
+                            { value: "line", label: "Line" },
+                            { value: "pie", label: "Pie" },
+                            { value: "scatter", label: "Scatter" }
                         ],
-                        defaultValue: "bar",
+                        defaultValue: "column",
                         show: function(data) {
                             return data.props && data.props.enableCharts;
                         }
                     },
-                    chartHeight: {
-                        ref: "props.chartHeight",
-                        label: "Chart Height (pixels)",
+                    enableDrilldown: {
+                        ref: "props.enableDrilldown",
+                        label: "Enable Chart Drilldown",
+                        type: "boolean",
+                        defaultValue: true,
+                        show: function(data) {
+                            return data.props && data.props.enableCharts;
+                        }
+                    },
+                    maxDataPoints: {
+                        ref: "props.maxDataPoints",
+                        label: "Max Data Points per Chart",
                         type: "number",
-                        defaultValue: 400,
-                        min: 200,
-                        max: 800,
+                        defaultValue: 50,
+                        min: 10,
+                        max: 200,
                         show: function(data) {
                             return data.props && data.props.enableCharts;
                         }
@@ -202,15 +182,6 @@ define([], function() {
                         defaultValue: 50,
                         min: 10,
                         max: 200
-                    },
-                    chartKeywords: {
-                        ref: "props.chartKeywords",
-                        label: "Chart Trigger Keywords (comma-separated)",
-                        type: "string",
-                        defaultValue: "chart,visualization,graph,plot,show chart,create chart,drill down,interactive",
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
                     }
                 }
             },
@@ -245,17 +216,6 @@ define([], function() {
                         label: "Auto Refresh Data on Selection Change",
                         type: "boolean",
                         defaultValue: true
-                    },
-                    chartDataLimit: {
-                        ref: "props.chartDataLimit",
-                        label: "Chart Data Point Limit",
-                        type: "number",
-                        defaultValue: 100,
-                        min: 10,
-                        max: 500,
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
                     }
                 }
             },
@@ -306,25 +266,8 @@ define([], function() {
                         ref: "props.customWelcomeMessage",
                         label: "Custom Welcome Message",
                         type: "string",
-                        defaultValue: "Hello! I'm your AI assistant. How can I help you analyze your data today? You can ask me to create charts, visualizations, or drill down into your data!",
-                        maxlength: 300
-                    },
-                    chartColorScheme: {
-                        ref: "props.chartColorScheme",
-                        label: "Chart Color Scheme",
-                        type: "string",
-                        component: "dropdown",
-                        options: [
-                            { value: "default", label: "Default Colors" },
-                            { value: "blue", label: "Blue Palette" },
-                            { value: "green", label: "Green Palette" },
-                            { value: "warm", label: "Warm Colors" },
-                            { value: "cool", label: "Cool Colors" }
-                        ],
-                        defaultValue: "default",
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
+                        defaultValue: "Hello! I'm your AI assistant. I can help you analyze your data and create interactive charts. How can I help you today?",
+                        maxlength: 200
                     }
                 }
             },
@@ -342,7 +285,7 @@ define([], function() {
                         ref: "props.customPromptPrefix",
                         label: "Custom Prompt Prefix",
                         type: "string",
-                        defaultValue: "You are an AI assistant specialized in QlikSense data analysis with interactive chart capabilities.",
+                        defaultValue: "You are an AI assistant specialized in QlikSense data analysis and chart generation.",
                         maxlength: 500
                     },
                     enableContextMemory: {
@@ -362,25 +305,12 @@ define([], function() {
                             return data.props && data.props.enableContextMemory;
                         }
                     },
-                    chartCacheEnabled: {
-                        ref: "props.chartCacheEnabled",
-                        label: "Enable Chart Data Caching",
-                        type: "boolean",
-                        defaultValue: true,
-                        show: function(data) {
-                            return data.props && data.props.enableCharts;
-                        }
-                    },
-                    chartCacheTimeout: {
-                        ref: "props.chartCacheTimeout",
-                        label: "Chart Cache Timeout (minutes)",
-                        type: "number",
-                        defaultValue: 15,
-                        min: 1,
-                        max: 120,
-                        show: function(data) {
-                            return data.props && data.props.enableCharts && data.props.chartCacheEnabled;
-                        }
+                    chartKeywords: {
+                        ref: "props.chartKeywords",
+                        label: "Chart Keywords (comma separated)",
+                        type: "string",
+                        defaultValue: "chart,show chart,create chart,visualization,visualize,graph,plot,display chart,generate chart",
+                        maxlength: 200
                     }
                 }
             }
@@ -392,32 +322,29 @@ define([], function() {
         label: "About",
         items: {
             header: {
-                label: "QlikSense AI Chatbot Extension with Interactive Charts",
+                label: "QlikSense AI Chatbot Extension with Charts",
                 style: "header",
                 component: "text"
             },
             paragraph1: {
-                label: "This extension integrates an AI-powered chatbot with your QlikSense application, featuring advanced interactive chart generation capabilities using Highcharts and Chart.js libraries.",
+                label: "This extension integrates an AI-powered chatbot with your QlikSense application, allowing users to interact with their data using natural language queries and generate interactive charts.",
                 component: "text"
             },
             paragraph2: {
-                label: "Enhanced Features:",
+                label: "Features include:",
                 component: "text"
             },
             features: {
-                label: "• Natural language data queries with chart generation\n• Interactive drill-down charts with breadcrumb navigation\n• Multi-level data exploration\n• Voice input support with chart interactions\n• Real-time chart export (PNG, PDF, SVG)\n• Responsive chart containers\n• Multiple chart types (bar, line, pie, scatter, area, treemap, sunburst)\n• QlikSense Capability API integration\n• Chat history export with chart references\n• Custom AI model configuration\n• Advanced chart animations and interactions",
-                component: "text"
-            },
-            chartLibraries: {
-                label: "Chart Libraries Used:",
-                component: "text"
-            },
-            libraries: {
-                label: "• Highcharts - Primary library for advanced interactivity\n• Chart.js - Fallback for basic charts\n• Drill-down and export modules\n• Interactive tooltips and legends",
+                label: "• Natural language data queries\n• Interactive chart generation with Highcharts\n• Chart drilldown capabilities\n• Role-based interactions\n• Voice input support\n• QlikSense Capability API integration\n• Chat history export\n• Custom AI model configuration\n• Responsive chart design",
                 component: "text"
             },
             version: {
-                label: "Version: 2.0.0 - Interactive Charts Edition",
+                label: "Version: 2.0.0",
+                style: "hint",
+                component: "text"
+            },
+            chartSupport: {
+                label: "Supported Chart Types: Column, Bar, Line, Pie, Scatter with drilldown support",
                 style: "hint",
                 component: "text"
             }
@@ -435,4 +362,3 @@ define([], function() {
         }
     };
 });
-
