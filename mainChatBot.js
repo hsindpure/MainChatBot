@@ -328,11 +328,11 @@ const fetchDataAndProcess = async (objectID) => {
  let model;
  let context = '4o';
                 if (context === '8k') {
-                    model = "mmc-tech-gpt-35-turbo-smart-latest";
+                    model = "mmc-tech";
                 } else if (context === '16k') {
-                    model = 'mmc-tech-gpt-35-turbo-16k-0613';
+                    model = 'mmc-tech';
                 } else if (context === '4o') {
-                    model = "mmc-tech-gpt-4o-mini-128k-2024-07-18";
+                    model = "mmc-tech-gpt";
                 }
 
                 const endpoint = `deployments/${model}/chat/completions`;
