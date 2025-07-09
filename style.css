@@ -1,630 +1,577 @@
-
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
-/* QlikSense AI Chatbot Extension Styles */
-.qlik-chatbot-extension {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 10000;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
-
-
-/*response speack and copy*/
-
-.copy-response{
-}
-
-.hear-responce{
-
-    position: absolute;
-    right: 15%;
-    top: 5px;
-    border: navajowhite;
-    padding: 5px;
-    padding-bottom: 0;
-    cursor: pointer;
-    opacity: 1;
-}
-
-
-
-.hear-responce{
-display: flex;
-    justify-content: flex-end;
-	
-    align-items: center;
-	width: 100%;
-}
-.hear-responce button{
-   width: 25px;
-    background-color: #f2f2f2;
-    color: #ccc;
-    border: 1px solid #d4d4d5;
-    padding: 5px;
-    display: flex;
-    /* border: none; */
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    border-radius: 2px;
-    font-size: 11px;
-    margin-right: 6px;
-}
-
-.user.hear-responce button {
-    width: 25px;
-    background-color: transparent;
-    color: #485aac;
-    border: navajowhite;
-    padding: 5px 0px;
-    display: flex;
-    /* border: none; */
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    border-radius: 2px;
-	}
-
-.bot-message .hear-responce button {
-    width: 25px;
-    background-color: #d9fffc;
-    color: #76d3cc;
-    border: 1px solid #76d3cc;
-	}
-	
-	
-.bot-message .hear-responce button {
-	
-	background-color: transparent;
-    color: #d9d9d9;
-    border: none;
-
-	}
-	
-.hear-responce .speak-button{
-margin-right:1px;
-}
-.hear-responce button:last-child{
-
-}
-
-.hear-responce button.speack-active{
-opacity: 0.9;
-    background: #ab2f2f;
-}
-.hear-responce button:hover{
-background: #ccc;
-    color: #fff;
-}
-
-.user.hear-responce button:hover {
-    background: #667eea;
-    color: #fff;
-}
-/* Chatbot Toggle Button */
-.chatbot-toggle {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: white;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.chatbot-toggle:hover {
-    transform: scale(1.1);
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
-}
-
-.chatbot-icon {
-    transition: transform 0.3s ease;
-}
-
-.chatbot-toggle:hover .chatbot-icon {
-    transform: rotate(15deg);
-}
-
-/* Pulse Animation */
-.pulse-ring {
-    position: absolute;
-    width: 60px;
-    height: 60px;
-    border: 3px solid rgba(102, 126, 234, 0.4);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1.8);
-        opacity: 0;
-    }
-}
-
-/* Chatbot Container */
-.chatbot-container {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    width: 500px;
-    height: 600px;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    transform: translateY(20px) scale(0.95);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.chatbot-container.active {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Header */
-.chatbot-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 16px 20px;
-    border-radius: 20px 20px 0 0;
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.app-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.app-icon {
-    font-size: 20px;
-}
-
-.app-name {
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.role-select {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    outline: none;
-}
-
-.role-select option {
-    background: #667eea;
-    color: white;
-}
-
-.download-history,
-.chatbot-close {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    padding: 6px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.download-history:hover,
-.chatbot-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* Body */
-.chatbot-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: #f8fafc;
-}
-
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-}
-
-/* Messages */
-.message {
-    margin-bottom: 20px;
-    animation: messageSlide 0.3s ease-out;
-}
-
-@keyframes messageSlide {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.message-content {
-position: relative;
-    max-width: 85%;
-}
-
-.user-message .message-content {
-    margin-left: auto;
-    background: #667eea;
-    color: white;
-    border-radius: 18px 18px 6px 18px;
-    padding: 12px 16px;
-}
-.bot-message .message-text {
-    line-height: 1.5;
-    word-wrap: break-word;
-    padding: 1% 5%;
-    background: #f7fafc;
-}
-
-.bot-message .message-content {
-    background: white;
-    color: #2d3748;
-    border-radius: 18px 18px 18px 6px;
-    padding: 12px 16px;
-    border: 1px solid #e2e8f0;
-}
-
-.message-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-    font-size: 12px;
-    opacity: 0.8;
-}
-
-.user-icon,
-.bot-icon {
-    font-size: 14px;
-}
-
-.user-name,
-.bot-name {
-    font-weight: 500;
-}
-
-.timestamp {
-    margin-left: auto;
-    font-size: 11px;
-}
-
-.message-text {
-    line-height: 1.5;
-    word-wrap: break-word;
-}
-
-/* Typing Indicator */
-.typing-indicator .message-content {
-    background: white;
-    border: 1px solid #e2e8f0;
-    padding: 16px;
-    width: fit-content;
-}
-
-.typing-animation {
-    display: flex;
-    gap: 4px;
-}
-
-.typing-animation span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #cbd5e0;
-    animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-animation span:nth-child(1) { animation-delay: -0.32s; }
-.typing-animation span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes typing {
-    0%, 80%, 100% {
-        transform: scale(0);
-        opacity: 0.5;
-    }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-/* Quick Actions */
-.quick-actions {
-    padding: 12px 20px;
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.quick-action {
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    color: #4a5568;
-    padding: 6px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.quick-action:hover {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-/* Footer */
-.chatbot-footer {
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    padding: 16px;
-}
-
-.input-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 24px;
-    padding: 8px 12px;
-    transition: border-color 0.2s ease;
-}
-
-.input-container:focus-within {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.chat-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    outline: none;
-    padding: 8px 0;
-    font-size: 14px;
-    color: #2d3748;
-}
-
-.chat-input::placeholder {
-    color: #a0aec0;
-}
-
-.voice-button,
-.send-button {
-    background: #667eea;
-    border: none;
-    color: white;
-    padding: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.voice-button:hover,
-.send-button:hover {
-    background: #5a67d8;
-    transform: scale(1.05);
-}
-
-.voice-button.listening {
-    background: #e53e3e;
-    animation: pulse-voice 1s infinite;
-}
-
-@keyframes pulse-voice {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-.footer-info {
-    text-align: center;
-    margin-top: 8px;
-}
-
-.powered-by {
-    font-size: 11px;
-    color: #a0aec0;
-}
-
-/* Data Tables and Visualizations */
-.ai-table {
-    margin: 12px 0;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-
-.data-table th {
-    background: #667eea;
-    color: white;
-    padding: 8px 12px;
-    text-align: left;
-    font-weight: 600;
-}
-
-.data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.data-table tr:hover {
-    background: #f7fafc;
-}
-
-.visualization-placeholder {
-    background: #f7fafc;
-    border: 2px dashed #cbd5e0;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    color: #a0aec0;
-    margin: 12px 0;
-}
-
-/* Responsive Design */
-@media (max-width: 480px) {
-    .chatbot-container {
-        width: calc(100vw - 40px);
-        height: calc(100vh - 120px);
-        right: 20px;
-        bottom: 80px;
-    }
-    
-    .quick-actions {
-        flex-direction: column;
-    }
-    
-    .quick-action {
-        width: 100%;
-        text-align: center;
-    }
-}
-
-/* Theme Variations */
-.qlik-chatbot-extension.theme-blue .chatbot-toggle,
-.qlik-chatbot-extension.theme-blue .chatbot-header,
-.qlik-chatbot-extension.theme-blue .voice-button,
-.qlik-chatbot-extension.theme-blue .send-button,
-.qlik-chatbot-extension.theme-blue .user-message .message-content {
-    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-}
-
-.qlik-chatbot-extension.theme-green .chatbot-toggle,
-.qlik-chatbot-extension.theme-green .chatbot-header,
-.qlik-chatbot-extension.theme-green .voice-button,
-.qlik-chatbot-extension.theme-green .send-button,
-.qlik-chatbot-extension.theme-green .user-message .message-content {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-}
-
-.qlik-chatbot-extension.theme-orange .chatbot-toggle,
-.qlik-chatbot-extension.theme-orange .chatbot-header,
-.qlik-chatbot-extension.theme-orange .voice-button,
-.qlik-chatbot-extension.theme-orange .send-button,
-.qlik-chatbot-extension.theme-orange .user-message .message-content {
-    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
-}
-
-.qlik-chatbot-extension.theme-red .chatbot-toggle,
-.qlik-chatbot-extension.theme-red .chatbot-header,
-.qlik-chatbot-extension.theme-red .voice-button,
-.qlik-chatbot-extension.theme-red .send-button,
-.qlik-chatbot-extension.theme-red .user-message .message-content {
-    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-}
-
-/* Loading States */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid #667eea;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Error States */
-.error-message {
-    background: #fed7d7 !important;
-    color: #c53030 !important;
-    border: 1px solid #feb2b2 !important;
-}
-
-.success-message {
-    background: #c6f6d5 !important;
-    color: #2d5016 !important;
-    border: 1px solid #9ae6b4 !important;
-}
-
-/* Accessibility */
-.chatbot-toggle:focus,
-.send-button:focus,
-.voice-button:focus,
-.chatbot-close:focus {
-    outline: 2px solid #667eea;
-    outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .chatbot-container {
-        border: 2px solid #000;
-    }
-    
-    .message-content {
-        border: 1px solid #000;
-    }
-}
+define([
+    'jquery',
+    'qlik',
+    './properties',
+    'text!./template.html',
+    'text!./style.css',
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
+], function($, qlik, props, template, cssContent, echarts) {
+    'use strict';
+
+    // Add CSS to document head
+    $('<style>').html(cssContent).appendTo('head');
+
+    return {
+        template: template,
+        definition: props,
+        controller: ['$scope', '$element', function($scope, $element) {
+            const app = qlik.currApp();
+            let MainData = [];
+            let hypercubeData = {};
+            let chatHistory = [];
+            let currentUser = 'User';
+            let selectedRole = 'Analyst';
+            let isListening = false;
+            let recognition;
+            let chartInstances = {}; // Track chart instances for cleanup
+            let currentChartType = null; // Track the current chart type
+
+            // Chart-related keywords for detection
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
+
+            // Initialize Speech Recognition
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+            }
+
+            // Fetch app data on initialization
+            $scope.$watch('layout', function(newVal) {
+                if (newVal) {
+                    fetchAppData();
+                    initializeChatbot();
+                }
+            });
+
+            function fetchAppData() {
+                // Get app info
+                app.getAppLayout().then(function(layout) {
+                    $scope.appName = layout["layout"].qTitle || 'QlikSense App';
+                    $scope.$apply();
+                });
+
+                // Create hypercube to fetch all app data
+                const hypercubeDef = {
+                    qDimensions: [],
+                    qMeasures: [],
+                    qInitialDataFetch: [{
+                        qTop: 0,
+                        qLeft: 0,
+                        qHeight: 1000,
+                        qWidth: 50
+                    }]
+                };
+
+                // Get all fields and create dimensions/measures
+                app.getList('FieldList').then(function(reply) {
+                    console.log("reply", reply.layout.qFieldList.qItems);
+                    const fields = reply.layout.qFieldList.qItems;
+
+                    fields.forEach(function(field, index) {
+                        if (index < 20) {
+                            if (field.qCardinal < 100) {
+                                hypercubeDef.qDimensions.push({
+                                    qDef: {
+                                        qFieldDefs: [field.qName],
+                                        qSortCriterias: [{
+                                            qSortByState: 1,
+                                            qSortByAscii: 1
+                                        }]
+                                    }
+                                });
+                            } else {
+                                hypercubeDef.qMeasures.push({
+                                    qDef: {
+                                        qDef: `Sum([${field.qName}])`,
+                                        qLabel: field.qName
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    // Create hypercube object
+                    app.createCube(hypercubeDef).then(function(model) {
+                        model.getLayout().then(function(layout) {
+                            console.log("data-layout", layout);
+                            hypercubeData = {
+                                dimensions: layout.qHyperCube.qDimensionInfo,
+                                measures: layout.qHyperCube.qMeasureInfo,
+                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : []
+                            };
+                        });
+                    });
+                });
+            }
+
+            // Process object data
+            const objects = $scope.$parent.layout.props.objects;
+            console.log(objects);
+
+            const elements = objects.split(',').map(item => item.trim());
+            const myArrayObjects = [];
+            elements.forEach(element => myArrayObjects.push(element));
+
+            const fetchDataAndProcess = async (objectID) => {
+                const jsonDataArray = [];
+
+                try {
+                    const model = await app.getObject(objectID);
+                    const layout = model.layout;
+                    console.log(model);
+
+                    if (!layout.qHyperCube) {
+                        return [];
+                    }
+
+                    const totalDimensions = layout.qHyperCube.qDimensionInfo.length;
+                    const totalMeasures = layout.qHyperCube.qMeasureInfo.length;
+                    const totalColumns = totalDimensions + totalMeasures;
+
+                    if (totalColumns === 0) return [];
+
+                    const totalRows = layout.qHyperCube.qSize.qcy;
+                    const pageSize = 500;
+                    const totalPages = Math.min(Math.ceil(totalRows / pageSize), 5);
+
+                    const headers = layout.qHyperCube.qDimensionInfo
+                        .map(d => d.qFallbackTitle)
+                        .concat(layout.qHyperCube.qMeasureInfo.map(m => m.qFallbackTitle))
+                        .filter(h => h !== undefined);
+
+                    for (let currentPage = 0; currentPage < totalPages; currentPage++) {
+                        const qTop = currentPage * pageSize;
+                        const qHeight = Math.min(pageSize, totalRows - qTop);
+
+                        if (qHeight <= 0) break;
+
+                        const dataPages = await model.getHyperCubeData('/qHyperCubeDef', [{
+                            qTop,
+                            qLeft: 0,
+                            qWidth: totalColumns,
+                            qHeight
+                        }]);
+
+                        dataPages[0].qMatrix.forEach(data => {
+                            const jsonData = {};
+                            headers.forEach((header, index) => {
+                                jsonData[header] = data[index]?.qText || null;
+                            });
+                            jsonDataArray.push(jsonData);
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Error fetching data for object ${objectID}:`, error);
+                    return [];
+                }
+                return jsonDataArray;
+            };
+
+            let sursa = [];
+            let allObjData = [];
+            myArrayObjects.forEach(function(objectID) {
+                fetchDataAndProcess(objectID).then(jsonDataArray => {
+                    console.log(jsonDataArray);
+                    allObjData.push(jsonDataArray);
+                    sursa = JSON.stringify(allObjData);
+                    console.log("all Objects Data in string", sursa);
+                }).catch(error => {
+                    console.error("Error fetching data:", error);
+                });
+            });
+
+            function initializeChatbot() {
+                const $chatbot = $element.find('.chatbot-container');
+                const $toggle = $element.find('.chatbot-toggle');
+                const $close = $element.find('.chatbot-close');
+                const $sendBtn = $element.find('.send-button');
+                const $input = $element.find('.chat-input');
+                const $voiceBtn = $element.find('.voice-button');
+                const $roleSelect = $element.find('.role-select');
+                const $downloadBtn = $element.find('.download-history');
+
+                // Toggle chatbot
+                $toggle.on('click', function() {
+                    $chatbot.addClass('active');
+                    $input.focus();
+                });
+
+                // Close chatbot
+                $close.on('click', function() {
+                    $chatbot.removeClass('active');
+                });
+
+                // Send message
+                $sendBtn.on('click', sendMessage);
+                $input.on('keypress', function(e) {
+                    if (e.which === 13) {
+                        sendMessage();
+                    }
+                });
+
+                // Voice input
+                $voiceBtn.on('click', toggleVoiceInput);
+
+                // Role selection
+                $roleSelect.on('change', function() {
+                    selectedRole = $(this).val();
+                    addMessage('system', `Role changed to: ${selectedRole}`);
+                });
+
+                // Download history
+                $downloadBtn.on('click', downloadChatHistory);
+
+                // Initialize with welcome message
+                addMessage('bot', `Hello! I'm your AI assistant for ${$scope.appName || 'this QlikSense app'}. I can help you analyze your data and create interactive visualizations. Try asking me to "create a chart" or "show me a graph"!`);
+            }
+
+            function sendMessage() {
+                const $input = $element.find('.chat-input');
+                const message = $input.val().trim();
+
+                if (!message) return;
+
+                // Add user message
+                addMessage('user', message);
+                $input.val('');
+
+                // Show typing indicator
+                showTypingIndicator();
+
+                // Send to AI API
+                processWithAI(message);
+            }
+
+            function detectChartRequest(query) {
+                const lowerQuery = query.toLowerCase();
+                return chartKeywords.some(keyword => lowerQuery.includes(keyword));
+            }
+
+            async function processWithAI(query) {
+                MainData.push(hypercubeData);
+
+                const decryptedKey = "key";
+
+                const baseUrl = "url";
+
+                let model;
+                let context = '4o';
+                if (context === '8k') {
+                    model = "mmc-tech-gpt-35-turbo-smart-latest";
+                } else if (context === '16k') {
+                    model = 'mmc-tech-gpt-35-turbo-16k-0613';
+                } else if (context === '4o') {
+                    model = "mmc-tech-gpt-4o-mini-128k-2024-07-18";
+                }
+
+                const endpoint = `deployments/${model}/chat/completions`;
+                const url = `${baseUrl}${endpoint}`;
+                const temp = 0.2; // Ranges 0-2
+
+                let Data = JSON.stringify(hypercubeData);
+                let prompt = `You are ${selectedRole}, You are a highly skilled health insurance business analyst. Utilize the JSON data provided below after 'data:', which includes information claims data. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.  response should be pointwise in use html elements`;
+
+                switch (selectedRole) {
+                    case 'Analyst':
+                        prompt += ` As a skilled analyst, focus on data trends, patterns, and statistical insights.response should be pointwise in use html elements`;
+                        break;
+                    case 'HR':
+                        prompt += ` As an HR professional, emphasize employee-related insights, performance metrics, and organizational trends.response should be pointwise in use html elements`;
+                        break;
+                    case 'Manager':
+                        prompt += ` As a manager, provide strategic insights, performance summaries, and actionable recommendations. response should be pointwise in use html elements`;
+                        break;
+                    case 'Executive':
+                        prompt += ` As an executive, focus on high-level strategic insights, KPIs, and business impact. response should be pointwise in use html elements`;
+                        break;
+                }
+                const isChartRequest = detectChartRequest(query);
+
+                if (isChartRequest) {
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request.
+
+                    IMPORTANT: Respond with a JSON object containing:
+                    1. "message": A brief explanation of the chart
+                    2. "chartConfig": A complete ECharts configuration object (in JSON format)
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+
+                    The chartConfig should include:
+                    - xAxis: with type and data
+                    - yAxis: with type
+                    - series: with type, data, and name
+
+                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.
+
+                    Example format:
+                    {
+                        "message": "Here's a bar chart showing...",
+                        "chartConfig": {
+                            "xAxis": {
+                                "type": "category",
+                                "data": ["Label1", "Label2"]
+                            },
+                            "yAxis": {
+                                "type": "value"
+                            },
+                            "series": [{
+                                "data": [10, 20],
+                                "type": "bar",
+                                "name": "Dataset Label"
+                            }]
+                        },
+                        "chartType": "bar"
+                    }`;
+                }
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${decryptedKey}`
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [{
+                                role: "user",
+                                content: `${prompt} data:${sursa} query:${query}`
+                            }],
+                            temperature: temp,
+                            max_tokens: 2000,
+                            response_format: isChartRequest ? {
+                                type: "json_object"
+                            } : undefined
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const aiResponse = data.choices[0].message.content;
+
+                    hideTypingIndicator();
+
+                    if (isChartRequest) {
+                        try {
+                            const chartResponse = JSON.parse(aiResponse);
+                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
+                        } catch (parseError) {
+                            console.error('Error parsing chart response:', parseError);
+                            addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
+                        }
+                    } else {
+                        addMessage('bot', aiResponse);
+                    }
+
+                } catch (error) {
+                    console.error('Error calling AI API:', error);
+                    hideTypingIndicator();
+                    addMessage('bot', 'I apologize, but I encountered an error processing your request. Please try again.');
+                }
+            }
+
+            function addMessage(sender, message, chartConfig = null, chartType = null) {
+                const $messages = $element.find('.chat-messages');
+                const timestamp = new Date().toLocaleTimeString();
+                const messageId = 'msg_' + Date.now();
+
+                let messageClass = sender === 'user' ? 'user-message' : 'bot-message';
+                let icon = sender === 'user' ? '\ud83d\udc64' : '\ud83e\udd16';
+                let name = sender === 'user' ? currentUser : 'AI Assistant';
+
+                if (sender === 'system') {
+                    messageClass = 'system-message';
+                    icon = '\u2699\ufe0f';
+                    name = 'System';
+                }
+
+                let messageHtml = `
+                    <div class="message ${messageClass}" id="${messageId}">
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="${sender}-icon">${icon}</span>
+                                <span class="${sender}-name">${name}</span>
+                                <span class="timestamp">${timestamp}</span>
+                            </div>
+                            <div class="message-text">${message}</div>
+                            ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
+                            <div class="hear-responce ${sender}">
+                                <button class="speak-button" onclick="speakText('${message.replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-volume-up"></i>
+                                </button>
+                                <button class="copy-button" onclick="copyToClipboard('${message.replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                $messages.append(messageHtml);
+                $messages.scrollTop($messages[0].scrollHeight);
+
+                // Generate chart if chartConfig is provided
+                if (chartConfig) {
+                    setTimeout(() => {
+                        generateChart(`chart_${messageId}`, chartConfig, chartType);
+                    }, 100);
+                }
+
+                // Add to chat history
+                chatHistory.push({
+                    sender: sender,
+                    message: message,
+                    timestamp: timestamp,
+                    chartConfig: chartConfig
+                });
+            }
+
+            function generateChart(containerId, chartConfig, chartType) {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    console.error('Chart container not found:', containerId);
+                    return;
+                }
+
+                // Clear previous content
+                container.innerHTML = '';
+
+                // Initialize chart
+                const myChart = echarts.init(container);
+
+                // Set chart options
+                myChart.setOption(chartConfig);
+
+                // Add click event listener for drilldown
+                myChart.on('click', function(params) {
+                    // Handle drilldown logic here
+                    console.log('Clicked data:', params);
+                    const drilldownQuery = `Tell me more about ${params.name}`;
+                    addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                    showTypingIndicator();
+                    processWithAI(drilldownQuery);
+                });
+
+                // Save chart instance
+                chartInstances[containerId] = myChart;
+
+                // Add resize observer for responsiveness
+                const resizeObserver = new ResizeObserver(() => {
+                    myChart.resize();
+                });
+                resizeObserver.observe(container);
+            }
+
+            function showTypingIndicator() {
+                const $messages = $element.find('.chat-messages');
+                const typingHtml = `
+                    <div class="message typing-indicator">
+                        <div class="message-content">
+                            <div class="typing-animation">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $messages.append(typingHtml);
+                $messages.scrollTop($messages[0].scrollHeight);
+            }
+
+            function hideTypingIndicator() {
+                $element.find('.typing-indicator').remove();
+            }
+
+            function toggleVoiceInput() {
+                if (!recognition) {
+                    alert('Voice recognition is not supported in your browser.');
+                    return;
+                }
+
+                const $voiceBtn = $element.find('.voice-button');
+
+                if (isListening) {
+                    recognition.stop();
+                    isListening = false;
+                    $voiceBtn.removeClass('listening');
+                } else {
+                    recognition.start();
+                    isListening = true;
+                    $voiceBtn.addClass('listening');
+                }
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    $element.find('.chat-input').val(transcript);
+                    isListening = false;
+                    $voiceBtn.removeClass('listening');
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    isListening = false;
+                    $voiceBtn.removeClass('listening');
+                };
+            }
+
+            function downloadChatHistory() {
+                const dataStr = JSON.stringify(chatHistory, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+                const exportFileDefaultName = `chat_history_${new Date().toISOString().split('T')[0]}.json`;
+
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+
+            // Global functions for message controls
+            window.speakText = function(text) {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.8;
+                    utterance.pitch = 1;
+                    speechSynthesis.speak(utterance);
+                } else {
+                    alert('Text-to-speech is not supported in your browser.');
+                }
+            };
+
+            window.copyToClipboard = function(text) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Show temporary feedback
+                        const feedback = document.createElement('div');
+                        feedback.textContent = 'Copied!';
+                        feedback.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; z-index: 10001;';
+                        document.body.appendChild(feedback);
+                        setTimeout(() => document.body.removeChild(feedback), 2000);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                }
+            };
+
+            // Cleanup function
+            $scope.$on('$destroy', function() {
+                // Destroy all chart instances
+                Object.values(chartInstances).forEach(chart => {
+                    if (chart) chart.dispose(); // Use dispose for ECharts
+                });
+                chartInstances = {};
+            });
+        }]
+    };
+});
