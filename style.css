@@ -12,6 +12,13 @@ define([
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
+          if (echarts && echartsGL) {
+        echarts.use(echartsGL);
+    } else {
+        console.error("ECharts or ECharts GL failed to load!");
+    }
+
+
     return {
         template: template,
         definition: props,
