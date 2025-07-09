@@ -4,8 +4,9 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
-], function($, qlik, props, template, cssContent, echarts) {
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js', // ECharts CDN
+    'https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js' // ECharts GL for 3D
+], function($, qlik, props, template, cssContent, echarts, echartsGL) {
     'use strict';
 
     // Add CSS to document head
@@ -25,9 +26,10 @@ define([
             let recognition;
             let chartInstances = {}; // Track chart instances for cleanup
             let currentChartType = null; // Track the current chart type
+            let lastContainerId = null; // Track the last chart container ID
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', '3d chart'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -295,16 +297,16 @@ define([
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
                     2. "chartConfig": A complete ECharts configuration object (in JSON format)
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.). Consider 3D chart types where appropriate (e.g., scatter3D, bar3D).
 
                     The chartConfig should include:
                     - xAxis: with type and data
                     - yAxis: with type
-                    - series: with type, data, and name
+                    - series: with type, data, and name.  For 3D charts, use xAxis3D, yAxis3D, zAxis3D, and series with type like 'scatter3D' or 'bar3D'.
 
-                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.
+                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.  Ensure the configuration is valid JSON.
 
-                    Example format:
+                    Example format (Bar Chart):
                     {
                         "message": "Here's a bar chart showing...",
                         "chartConfig": {
@@ -322,6 +324,22 @@ define([
                             }]
                         },
                         "chartType": "bar"
+                    }
+
+                    Example format (3D Scatter Chart):
+                    {
+                        "message": "Here's a 3D scatter chart showing...",
+                        "chartConfig": {
+                            "xAxis3D": { "type": "category", "data": ["X1", "X2"] },
+                            "yAxis3D": { "type": "category", "data": ["Y1", "Y2"] },
+                            "zAxis3D": { "type": "value" },
+                            "series": [{
+                                "data": [[0, 0, 10], [1, 1, 20]],
+                                "type": "scatter3D",
+                                "name": "Dataset Label"
+                            }]
+                        },
+                        "chartType": "scatter3D"
                     }`;
                 }
 
@@ -416,8 +434,9 @@ define([
 
                 // Generate chart if chartConfig is provided
                 if (chartConfig) {
+                    lastContainerId = `chart_${messageId}`; // Store the container ID
                     setTimeout(() => {
-                        generateChart(`chart_${messageId}`, chartConfig, chartType);
+                        generateChart(lastContainerId, chartConfig, chartType);
                     }, 100);
                 }
 
@@ -451,9 +470,12 @@ define([
                     // Handle drilldown logic here
                     console.log('Clicked data:', params);
                     const drilldownQuery = `Tell me more about ${params.name}`;
-                    addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                    // No user message
                     showTypingIndicator();
-                    processWithAI(drilldownQuery);
+                    processWithAI(drilldownQuery); // Send drilldown query
+
+                    // Store the current chart type for the drilldown
+                    currentChartType = chartType;
                 });
 
                 // Save chart instance
@@ -464,6 +486,153 @@ define([
                     myChart.resize();
                 });
                 resizeObserver.observe(container);
+            }
+
+            // Modify processWithAI to update the chart on drilldown
+            async function processWithAI(query) {
+                MainData.push(hypercubeData);
+
+                const decryptedKey = "key";
+
+                const baseUrl = "url";
+
+                let model;
+                let context = '4o';
+                if (context === '8k') {
+                    model = "mmc-tech-gpt-35-turbo-smart-latest";
+                } else if (context === '16k') {
+                    model = 'mmc-tech-gpt-35-turbo-16k-0613';
+                } else if (context === '4o') {
+                    model = "mmc-tech-gpt-4o-mini-128k-2024-07-18";
+                }
+
+                const endpoint = `deployments/${model}/chat/completions`;
+                const url = `${baseUrl}${endpoint}`;
+                const temp = 0.2; // Ranges 0-2
+
+                let Data = JSON.stringify(hypercubeData);
+                let prompt = `You are ${selectedRole}, You are a highly skilled health insurance business analyst. Utilize the JSON data provided below after 'data:', which includes information claims data. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.  response should be pointwise in use html elements`;
+
+                switch (selectedRole) {
+                    case 'Analyst':
+                        prompt += ` As a skilled analyst, focus on data trends, patterns, and statistical insights.response should be pointwise in use html elements`;
+                        break;
+                    case 'HR':
+                        prompt += ` As an HR professional, emphasize employee-related insights, performance metrics, and organizational trends.response should be pointwise in use html elements`;
+                        break;
+                    case 'Manager':
+                        prompt += ` As a manager, provide strategic insights, performance summaries, and actionable recommendations. response should be pointwise in use html elements`;
+                        break;
+                    case 'Executive':
+                        prompt += ` As an executive, focus on high-level strategic insights, KPIs, and business impact. response should be pointwise in use html elements`;
+                        break;
+                }
+                const isChartRequest = detectChartRequest(query);
+
+                if (isChartRequest) {
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request.
+
+                    IMPORTANT: Respond with a JSON object containing:
+                    1. "message": A brief explanation of the chart
+                    2. "chartConfig": A complete ECharts configuration object (in JSON format)
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.). Consider 3D chart types where appropriate (e.g., scatter3D, bar3D).
+
+                    The chartConfig should include:
+                    - xAxis: with type and data
+                    - yAxis: with type
+                    - series: with type, data, and name.  For 3D charts, use xAxis3D, yAxis3D, zAxis3D, and series with type like 'scatter3D' or 'bar3D'.
+
+                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.  Ensure the configuration is valid JSON.
+
+                    Example format (Bar Chart):
+                    {
+                        "message": "Here's a bar chart showing...",
+                        "chartConfig": {
+                            "xAxis": {
+                                "type": "category",
+                                "data": ["Label1", "Label2"]
+                            },
+                            "yAxis": {
+                                "type": "value"
+                            },
+                            "series": [{
+                                "data": [10, 20],
+                                "type": "bar",
+                                "name": "Dataset Label"
+                            }]
+                        },
+                        "chartType": "bar"
+                    }
+
+                    Example format (3D Scatter Chart):
+                    {
+                        "message": "Here's a 3D scatter chart showing...",
+                        "chartConfig": {
+                            "xAxis3D": { "type": "category", "data": ["X1", "X2"] },
+                            "yAxis3D": { "type": "category", "data": ["Y1", "Y2"] },
+                            "zAxis3D": { "type": "value" },
+                            "series": [{
+                                "data": [[0, 0, 10], [1, 1, 20]],
+                                "type": "scatter3D",
+                                "name": "Dataset Label"
+                            }]
+                        },
+                        "chartType": "scatter3D"
+                    }`;
+                }
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${decryptedKey}`
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [{
+                                role: "user",
+                                content: `${prompt} data:${sursa} query:${query}`
+                            }],
+                            temperature: temp,
+                            max_tokens: 2000,
+                            response_format: isChartRequest ? {
+                                type: "json_object"
+                            } : undefined
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const aiResponse = data.choices[0].message.content;
+
+                    hideTypingIndicator();
+
+                    if (isChartRequest) {
+                        try {
+                            const chartResponse = JSON.parse(aiResponse);
+                            // Update the existing chart
+                            if (lastContainerId) {
+                                generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
+                            } else {
+                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
+                            }
+                        } catch (parseError) {
+                            console.error('Error parsing chart response:', parseError);
+                            addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
+                        }
+                    } else {
+                        addMessage('bot', aiResponse);
+                    }
+
+                } catch (error) {
+                    console.error('Error calling AI API:', error);
+                    hideTypingIndicator();
+                    addMessage('bot', 'I apologize, but I encountered an error processing your request. Please try again.');
+                }
             }
 
             function showTypingIndicator() {
