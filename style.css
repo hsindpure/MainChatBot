@@ -4,24 +4,17 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.fusioncharts.com/fusioncharts/latest/fusioncharts.js',
-    'https://cdn.fusioncharts.com/fusioncharts/latest/fusioncharts.charts.js',
-    'https://cdn.fusioncharts.com/fusioncharts/latest/themes/fusioncharts.theme.fusion.js'
-], function($, qlik, props, template, cssContent, FusionCharts, FusionChartsCharts, FusionChartsTheme) {
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
+], function($, qlik, props, template, cssContent, echarts) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Apply FusionCharts theme
-    FusionCharts.options.defaultChartAttribute = {
-        "theme": "fusion"
-    };
-
     return {
         template: template,
         definition: props,
-        controller: ['$scope', '$element', '$timeout', function($scope, $element, $timeout) {
+        controller: ['$scope', '$element', function($scope, $element) {
             const app = qlik.currApp();
             let MainData = [];
             let hypercubeData = {};
@@ -30,12 +23,15 @@ define([
             let selectedRole = 'Analyst';
             let isListening = false;
             let recognition;
-            let chartInstances = {};
-            let currentChartType = null;
-            let lastContainerId = null;
+            let chartInstances = {}; // Track chart instances for cleanup
+            let currentChartType = null; // Track the current chart type
+            let currentChartContainerId = null; // Track the current chart container ID
+            let lastChartConfig = null; // Store the last chart configuration
 
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'column chart'];
+            // Chart-related keywords for detection
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
 
+            // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
                 recognition = new webkitSpeechRecognition();
                 recognition.continuous = false;
@@ -43,6 +39,7 @@ define([
                 recognition.lang = 'en-US';
             }
 
+            // Fetch app data on initialization
             $scope.$watch('layout', function(newVal) {
                 if (newVal) {
                     fetchAppData();
@@ -51,11 +48,13 @@ define([
             });
 
             function fetchAppData() {
+                // Get app info
                 app.getAppLayout().then(function(layout) {
                     $scope.appName = layout["layout"].qTitle || 'QlikSense App';
                     $scope.$apply();
                 });
 
+                // Create hypercube to fetch all app data
                 const hypercubeDef = {
                     qDimensions: [],
                     qMeasures: [],
@@ -67,6 +66,7 @@ define([
                     }]
                 };
 
+                // Get all fields and create dimensions/measures
                 app.getList('FieldList').then(function(reply) {
                     console.log("reply", reply.layout.qFieldList.qItems);
                     const fields = reply.layout.qFieldList.qItems;
@@ -94,19 +94,21 @@ define([
                         }
                     });
 
+                    // Create hypercube object
                     app.createCube(hypercubeDef).then(function(model) {
                         model.getLayout().then(function(layout) {
                             console.log("data-layout", layout);
                             hypercubeData = {
                                 dimensions: layout.qHyperCube.qDimensionInfo,
                                 measures: layout.qHyperCube.qMeasureInfo,
-                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qMatrix : []
+                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : []
                             };
                         });
                     });
                 });
             }
 
+            // Process object data
             const objects = $scope.$parent.layout.props.objects;
             console.log(objects);
 
@@ -192,15 +194,18 @@ define([
                 const $roleSelect = $element.find('.role-select');
                 const $downloadBtn = $element.find('.download-history');
 
+                // Toggle chatbot
                 $toggle.on('click', function() {
                     $chatbot.addClass('active');
                     $input.focus();
                 });
 
+                // Close chatbot
                 $close.on('click', function() {
                     $chatbot.removeClass('active');
                 });
 
+                // Send message
                 $sendBtn.on('click', sendMessage);
                 $input.on('keypress', function(e) {
                     if (e.which === 13) {
@@ -208,15 +213,19 @@ define([
                     }
                 });
 
+                // Voice input
                 $voiceBtn.on('click', toggleVoiceInput);
 
+                // Role selection
                 $roleSelect.on('change', function() {
                     selectedRole = $(this).val();
                     addMessage('system', `Role changed to: ${selectedRole}`);
                 });
 
+                // Download history
                 $downloadBtn.on('click', downloadChatHistory);
 
+                // Initialize with welcome message
                 addMessage('bot', `Hello! I'm your AI assistant for ${$scope.appName || 'this QlikSense app'}. I can help you analyze your data and create interactive visualizations. Try asking me to "create a chart" or "show me a graph"!`);
             }
 
@@ -226,11 +235,14 @@ define([
 
                 if (!message) return;
 
+                // Add user message
                 addMessage('user', message);
                 $input.val('');
 
+                // Show typing indicator
                 showTypingIndicator();
 
+                // Send to AI API
                 processWithAI(message);
             }
 
@@ -242,9 +254,12 @@ define([
             async function processWithAI(query) {
                 MainData.push(hypercubeData);
 
+                console.log(query);
+
                 const decryptedKey = "key";
 
                 const baseUrl = "url";
+
 
                 let model;
                 let context = '4o';
@@ -258,7 +273,7 @@ define([
 
                 const endpoint = `deployments/${model}/chat/completions`;
                 const url = `${baseUrl}${endpoint}`;
-                const temp = 0.2;
+                const temp = 0.2; // Ranges 0-2
 
                 let Data = JSON.stringify(hypercubeData);
                 let prompt = `You are ${selectedRole}, You are a highly skilled health insurance business analyst. Utilize the JSON data provided below after 'data:', which includes information claims data. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.  response should be pointwise in use html elements`;
@@ -280,48 +295,39 @@ define([
                 const isChartRequest = detectChartRequest(query);
 
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert using FusionCharts. Based on the QlikSense data provided, create a FusionCharts configuration object for the user's request.
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request.
 
                     IMPORTANT: Respond with a JSON object containing:
-                    1. "message": A brief explanation of the chart.
-                    2. "chartConfig": A complete FusionCharts configuration object (in JSON format).
-                    3. "chartType": The type of chart (e.g., "column2d", "line", "pie2d", "scatter").
+                    1. "message": A brief explanation of the chart
+                    2. "chartConfig": A complete ECharts configuration object (in JSON format)
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
 
                     The chartConfig should include:
-                    - "type": The chart type (e.g., "column2d", "line", "pie2d", "scatter").
-                    - "renderAt": The ID of the container where the chart will be rendered.
-                    - "width": The width of the chart.
-                    - "height": The height of the chart.
-                    - "dataFormat": The format of the data (e.g., "json").
-                    - "dataSource": The chart data (in JSON format).
+                    - xAxis: with type and data
+                    - yAxis: with type
+                    - series: with type, data, and name
 
-                    Example format (Column Chart):
+                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.
+
+                    Example format:
                     {
-                        "message": "Here's a column chart showing...",
+                        "message": "Here's a bar chart showing...",
                         "chartConfig": {
-                            "type": "column2d",
-                            "renderAt": "chartContainer",
-                            "width": "100%",
-                            "height": "400",
-                            "dataFormat": "json",
-                            "dataSource": {
-                                "chart": {
-                                    "caption": "My Chart",
-                                    "xAxisName": "Category",
-                                    "yAxisName": "Value",
-                                    "theme": "fusion"
-                                },
-                                "data": [
-                                    {"label": "Label1", "value": 10},
-                                    {"label": "Label2", "value": 20}
-                                ]
-                            }
+                            "xAxis": {
+                                "type": "category",
+                                "data": ["Label1", "Label2"]
+                            },
+                            "yAxis": {
+                                "type": "value"
+                            },
+                            "series": [{
+                                "data": [10, 20],
+                                "type": "bar",
+                                "name": "Dataset Label"
+                            }]
                         },
-                        "chartType": "column2d"
-                    }
-
-                    Do NOT include any FusionCharts code outside of the chartConfig object.
-                    `;
+                        "chartType": "bar"
+                    }`;
                 }
 
                 try {
@@ -357,13 +363,10 @@ define([
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
-                            console.log('AI Response:', chartResponse);
-                            if (lastContainerId) {
-                                console.log('lastContainerId:', lastContainerId);
-                                generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
-                            } else {
-                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
-                            }
+                            lastChartConfig = chartResponse.chartConfig; // Store the chart config
+                            const messageText = chartResponse.message || 'Here\'s your chart:';
+                            addMessage('bot', messageText, chartResponse.chartConfig, chartResponse.chartType);
+
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
                             addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
@@ -419,13 +422,15 @@ define([
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
 
+                // Generate chart if chartConfig is provided
                 if (chartConfig) {
-                    lastContainerId = `chart_${messageId}`;
-                    $timeout(() => {
-                        generateChart(lastContainerId, chartConfig, chartType);
-                    }, 300);
+                    currentChartContainerId = `chart_${messageId}`; // Store the container ID
+                    setTimeout(() => {
+                        generateChart(currentChartContainerId, chartConfig, chartType);
+                    }, 100);
                 }
 
+                // Add to chat history
                 chatHistory.push({
                     sender: sender,
                     message: message,
@@ -441,24 +446,43 @@ define([
                     return;
                 }
 
-                container.innerHTML = ''; // Clear previous content
+                // Clear previous content
+                container.innerHTML = '';
 
-                // Set the renderAt property to the containerId
-                chartConfig.renderAt = containerId;
+                // Initialize chart
+                const myChart = echarts.init(container);
 
-                try {
-                    // Create chart instance
-                    let chart = new FusionCharts(chartConfig);
+                // Set chart options
+                myChart.setOption(chartConfig);
 
-                    // Render the chart
-                    chart.render();
+                // Add click event listener for drilldown
+                myChart.on('click', function(params) {
+                    // Handle drilldown logic here - Modify chart directly
+                    if (lastChartConfig && lastChartConfig.series) {
+                        // Example: Filter data based on the clicked data point
+                        const newData = lastChartConfig.series.map(series => ({
+                            ...series,
+                            data: series.data.filter(item => item === params.value) // Example filter
+                        }));
 
-                    // Store chart instance for later disposal
-                    chartInstances[containerId] = chart;
+                        // Update the chart options with the filtered data
+                        const newChartConfig = {
+                            ...lastChartConfig,
+                            series: newData
+                        };
 
-                } catch (error) {
-                    console.error('FusionCharts Error:', error);
-                }
+                        myChart.setOption(newChartConfig);
+                    }
+                });
+
+                // Save chart instance
+                chartInstances[containerId] = myChart;
+
+                // Add resize observer for responsiveness
+                const resizeObserver = new ResizeObserver(() => {
+                    myChart.resize();
+                });
+                resizeObserver.observe(container);
             }
 
             function showTypingIndicator() {
@@ -526,11 +550,44 @@ define([
                 linkElement.click();
             }
 
+            // Global functions for message controls
+            window.speakText = function(text) {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.8;
+                    utterance.pitch = 1;
+                    speechSynthesis.speak(utterance);
+                } else {
+                    alert('Text-to-speech is not supported in your browser.');
+                }
+            };
+
+            window.copyToClipboard = function(text) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Show temporary feedback
+                        const feedback = document.createElement('div');
+                        feedback.textContent = 'Copied!';
+                        feedback.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; z-index: 10001;';
+                        document.body.appendChild(feedback);
+                        setTimeout(() => document.body.removeChild(feedback), 2000);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                }
+            };
+
+            // Cleanup function
             $scope.$on('$destroy', function() {
+                // Destroy all chart instances
                 Object.values(chartInstances).forEach(chart => {
-                    if (chart && typeof chart.dispose === 'function') {
-                        chart.dispose(); // Dispose of FusionCharts chart
-                    }
+                    if (chart) chart.dispose(); // Use dispose for ECharts
                 });
                 chartInstances = {};
             });
