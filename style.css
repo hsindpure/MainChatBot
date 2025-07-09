@@ -4,17 +4,21 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
-], function($, qlik, props, template, cssContent, echarts) {
+    'https://code.highcharts.com/highcharts.js', // Highcharts CDN
+    'https://code.highcharts.com/highcharts-3d.js' // Highcharts 3D CDN
+], function($, qlik, props, template, cssContent, Highcharts, Highcharts3D) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
+    // Apply Highcharts 3D
+    Highcharts3D(Highcharts);
+
     return {
         template: template,
         definition: props,
-        controller: ['$scope', '$element', function($scope, $element) {
+        controller: ['$scope', '$element', '$timeout', function($scope, $element, $timeout) { // Inject $timeout
             const app = qlik.currApp();
             let MainData = [];
             let hypercubeData = {};
@@ -28,7 +32,7 @@ define([
             let lastContainerId = null; // Track the last chart container ID
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'column chart', '3d chart', '3d graph', '3d plot'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -292,39 +296,80 @@ define([
                 const isChartRequest = detectChartRequest(query);
 
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request.
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a Highcharts configuration for the user's request.
 
                     IMPORTANT: Respond with a JSON object containing:
-                    1. "message": A brief explanation of the chart
-                    2. "chartConfig": A complete ECharts configuration object (in JSON format)
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+                    1. "message": A brief explanation of the chart.
+                    2. "chartConfig": A complete Highcharts configuration object (in JSON format).
+                    3. "chartType": The type of chart (bar, line, pie, scatter, column, etc.).  If the chart is 3D, specify that in the chartType.
 
                     The chartConfig should include:
-                    - xAxis: with type and data
-                    - yAxis: with type
+                    - chart: with type (e.g., 'bar', 'line', 'pie', 'column', 'scatter', 'column3d', 'pie3d') and optionally options3d for 3D charts.
+                    - title: with text
+                    - xAxis: with categories or title
+                    - yAxis: with title
                     - series: with type, data, and name
 
-                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.  Ensure the configuration is valid JSON.
+                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers. Ensure the configuration is valid JSON.
 
-                    Example format (Bar Chart):
+                    Example format (Column Chart):
                     {
-                        "message": "Here's a bar chart showing...",
+                        "message": "Here's a column chart showing...",
                         "chartConfig": {
+                            "chart": {
+                                "type": "column"
+                            },
+                            "title": {
+                                "text": "My Chart"
+                            },
                             "xAxis": {
-                                "type": "category",
-                                "data": ["Label1", "Label2"]
+                                "categories": ["Label1", "Label2"]
                             },
                             "yAxis": {
-                                "type": "value"
+                                "title": {
+                                    "text": "Value"
+                                }
                             },
                             "series": [{
-                                "data": [10, 20],
-                                "type": "bar",
-                                "name": "Dataset Label"
+                                "name": "Dataset Label",
+                                "data": [10, 20]
                             }]
                         },
-                        "chartType": "bar"
-                    }`;
+                        "chartType": "column"
+                    }
+
+                    Example format (3D Column Chart):
+                    {
+                        "message": "Here's a 3D column chart showing...",
+                        "chartConfig": {
+                            "chart": {
+                                "type": "column3d",
+                                "options3d": {
+                                    "enabled": true,
+                                    "alpha": 15,
+                                    "beta": 15,
+                                    "depth": 50
+                                }
+                            },
+                            "title": {
+                                "text": "My 3D Chart"
+                            },
+                            "xAxis": {
+                                "categories": ["Label1", "Label2"]
+                            },
+                            "yAxis": {
+                                "title": {
+                                    "text": "Value"
+                                }
+                            },
+                            "series": [{
+                                "name": "Dataset Label",
+                                "data": [10, 20]
+                            }]
+                        },
+                        "chartType": "column3d"
+                    }
+                    `;
                 }
 
                 try {
@@ -360,8 +405,10 @@ define([
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
+                            console.log('AI Response:', chartResponse); // Debugging
                             // Update the existing chart
                             if (lastContainerId) {
+                                console.log('lastContainerId:', lastContainerId); // Debugging
                                 generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
                             } else {
                                 addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
@@ -424,9 +471,10 @@ define([
                 // Generate chart if chartConfig is provided
                 if (chartConfig) {
                     lastContainerId = `chart_${messageId}`; // Store the container ID
-                    setTimeout(() => {
+                    // Using $timeout to ensure DOM is ready
+                    $timeout(() => {
                         generateChart(lastContainerId, chartConfig, chartType);
-                    }, 100);
+                    }, 300);
                 }
 
                 // Add to chat history
@@ -448,33 +496,12 @@ define([
                 // Clear previous content
                 container.innerHTML = '';
 
-                // Initialize chart
-                const myChart = echarts.init(container);
-
-                // Set chart options
-                myChart.setOption(chartConfig);
-
-                // Add click event listener for drilldown
-                myChart.on('click', function(params) {
-                    // Handle drilldown logic here
-                    console.log('Clicked data:', params);
-                    const drilldownQuery = `Tell me more about ${params.name}`;
-                    // No user message
-                    showTypingIndicator();
-                    processWithAI(drilldownQuery); // Send drilldown query
-
-                    // Store the current chart type for the drilldown
-                    currentChartType = chartType;
-                });
-
-                // Save chart instance
-                chartInstances[containerId] = myChart;
-
-                // Add resize observer for responsiveness
-                const resizeObserver = new ResizeObserver(() => {
-                    myChart.resize();
-                });
-                resizeObserver.observe(container);
+                try {
+                    // Initialize Highcharts
+                    Highcharts.chart(containerId, chartConfig);
+                } catch (error) {
+                    console.error('Highcharts Error:', error);
+                }
             }
 
             function showTypingIndicator() {
@@ -579,7 +606,7 @@ define([
             $scope.$on('$destroy', function() {
                 // Destroy all chart instances
                 Object.values(chartInstances).forEach(chart => {
-                    if (chart) chart.dispose(); // Use dispose for ECharts
+                    // Highcharts charts don't need explicit disposal
                 });
                 chartInstances = {};
             });
