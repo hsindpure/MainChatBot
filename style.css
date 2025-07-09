@@ -4,17 +4,19 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.amcharts.com/lib/4/core.js',
-    'https://cdn.amcharts.com/lib/4/charts.js',
-    'https://cdn.amcharts.com/lib/4/themes/animated.js'
-], function($, qlik, props, template, cssContent, am4core, am4charts, am4themes_animated) {
+    'https://cdn.fusioncharts.com/fusioncharts/latest/fusioncharts.js',
+    'https://cdn.fusioncharts.com/fusioncharts/latest/fusioncharts.charts.js',
+    'https://cdn.fusioncharts.com/fusioncharts/latest/themes/fusioncharts.theme.fusion.js'
+], function($, qlik, props, template, cssContent, FusionCharts, FusionChartsCharts, FusionChartsTheme) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Apply amCharts theme
-    am4core.useTheme(am4themes_animated.default);
+    // Apply FusionCharts theme
+    FusionCharts.options.defaultChartAttribute = {
+        "theme": "fusion"
+    };
 
     return {
         template: template,
@@ -278,47 +280,47 @@ define([
                 const isChartRequest = detectChartRequest(query);
 
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert using amCharts. Based on the QlikSense data provided, create an amCharts configuration object for the user's request.
+                    prompt = `You are ${selectedRole}, a data visualization expert using FusionCharts. Based on the QlikSense data provided, create a FusionCharts configuration object for the user's request.
 
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart.
-                    2. "chartConfig": A complete amCharts configuration object (in JSON format).
-                    3. "chartType": The type of chart (bar, line, pie, scatter, column, etc.).
+                    2. "chartConfig": A complete FusionCharts configuration object (in JSON format).
+                    3. "chartType": The type of chart (e.g., "column2d", "line", "pie2d", "scatter").
 
                     The chartConfig should include:
-                    - "type": The chart type (e.g., "XYChart", "PieChart").
-                    - "data": An array of data objects.
-                    - "xAxes" or "yAxes": Axis configurations.
-                    - "series": Series configurations.
+                    - "type": The chart type (e.g., "column2d", "line", "pie2d", "scatter").
+                    - "renderAt": The ID of the container where the chart will be rendered.
+                    - "width": The width of the chart.
+                    - "height": The height of the chart.
+                    - "dataFormat": The format of the data (e.g., "json").
+                    - "dataSource": The chart data (in JSON format).
 
                     Example format (Column Chart):
                     {
                         "message": "Here's a column chart showing...",
                         "chartConfig": {
-                            "type": "XYChart",
-                            "data": [
-                                {"category": "Label1", "value": 10},
-                                {"category": "Label2", "value": 20}
-                            ],
-                            "xAxes": [{
-                                "type": "CategoryAxis",
-                                "dataFields": { "category": "category" }
-                            }],
-                            "yAxes": [{
-                                "type": "ValueAxis"
-                            }],
-                            "series": [{
-                                "type": "ColumnSeries",
-                                "dataFields": {
-                                    "valueY": "value",
-                                    "categoryX": "category"
-                                }
-                            }]
+                            "type": "column2d",
+                            "renderAt": "chartContainer",
+                            "width": "100%",
+                            "height": "400",
+                            "dataFormat": "json",
+                            "dataSource": {
+                                "chart": {
+                                    "caption": "My Chart",
+                                    "xAxisName": "Category",
+                                    "yAxisName": "Value",
+                                    "theme": "fusion"
+                                },
+                                "data": [
+                                    {"label": "Label1", "value": 10},
+                                    {"label": "Label2", "value": 20}
+                                ]
+                            }
                         },
-                        "chartType": "column"
+                        "chartType": "column2d"
                     }
 
-                    Do NOT include any amCharts code outside of the chartConfig object.
+                    Do NOT include any FusionCharts code outside of the chartConfig object.
                     `;
                 }
 
@@ -441,44 +443,21 @@ define([
 
                 container.innerHTML = ''; // Clear previous content
 
+                // Set the renderAt property to the containerId
+                chartConfig.renderAt = containerId;
+
                 try {
                     // Create chart instance
-                    let chart = am4core.create(containerId, am4core[chartConfig.type]);
+                    let chart = new FusionCharts(chartConfig);
 
-                    // Set data
-                    chart.data = chartConfig.data;
-
-                    // Copy properties from chartConfig to chart
-                    for (let key in chartConfig) {
-                        if (key !== 'type' && key !== 'data') {
-                            chart[key] = chartConfig[key];
-                        }
-                    }
-
-                    // Manually create axes and series based on chart type
-                    if (chartConfig.type === "XYChart") {
-                        // Create axes
-                        let categoryAxis = chart.xAxes.push(new am4charts.CategoryAxis());
-                        categoryAxis.dataFields.category = chartConfig.xAxes[0].dataFields.category;
-
-                        let valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
-
-                        // Create series
-                        let series = chart.series.push(new am4charts[chartConfig.series[0].type]());
-                        series.dataFields.valueY = chartConfig.series[0].dataFields.valueY;
-                        series.dataFields.categoryX = chartConfig.series[0].dataFields.categoryX;
-                    } else if (chartConfig.type === "PieChart") {
-                        // Create series
-                        let series = chart.series.push(new am4charts.PieSeries());
-                        series.dataFields.value = chartConfig.series[0].dataFields.value;
-                        series.dataFields.category = chartConfig.series[0].dataFields.category;
-                    }
+                    // Render the chart
+                    chart.render();
 
                     // Store chart instance for later disposal
                     chartInstances[containerId] = chart;
 
                 } catch (error) {
-                    console.error('amCharts Error:', error);
+                    console.error('FusionCharts Error:', error);
                 }
             }
 
@@ -549,8 +528,8 @@ define([
 
             $scope.$on('$destroy', function() {
                 Object.values(chartInstances).forEach(chart => {
-                    if (chart) {
-                        chart.dispose(); // Dispose of amCharts chart
+                    if (chart && typeof chart.dispose === 'function') {
+                        chart.dispose(); // Dispose of FusionCharts chart
                     }
                 });
                 chartInstances = {};
