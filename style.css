@@ -4,18 +4,20 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://code.highcharts.com/highcharts.js' ,// Highcharts CDN
-    'https://code.highcharts.com/highcharts-3d.js' // Highcharts 3D CDN
-], function($, qlik, props, template, cssContent, Highcharts) { // Removed Highcharts3D from arguments
+    'https://code.highcharts.com/highcharts.js' // Highcharts CDN
+], function($, qlik, props, template, cssContent, Highcharts) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Apply Highcharts 3D - Moved inside the define callback
+    let highcharts3DLoaded = false; // Flag to track if Highcharts 3D is loaded
+
+    // Load Highcharts 3D
     require(['https://code.highcharts.com/highcharts-3d.js'], function(Highcharts3D) {
         if (Highcharts3D) {
             Highcharts3D(Highcharts);
+            highcharts3DLoaded = true;
             console.log('Highcharts 3D module loaded and applied.');
         } else {
             console.error('Highcharts 3D module failed to load.');
@@ -25,7 +27,7 @@ define([
     return {
         template: template,
         definition: props,
-        controller: ['$scope', '$element', '$timeout', function($scope, $element, $timeout) { // Inject $timeout
+        controller: ['$scope', '$element', '$timeout', function($scope, $element, $timeout) {
             const app = qlik.currApp();
             let MainData = [];
             let hypercubeData = {};
@@ -34,14 +36,12 @@ define([
             let selectedRole = 'Analyst';
             let isListening = false;
             let recognition;
-            let chartInstances = {}; // Track chart instances for cleanup
-            let currentChartType = null; // Track the current chart type
-            let lastContainerId = null; // Track the last chart container ID
+            let chartInstances = {};
+            let currentChartType = null;
+            let lastContainerId = null;
 
-            // Chart-related keywords for detection
             const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'column chart', '3d chart', '3d graph', '3d plot'];
 
-            // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
                 recognition = new webkitSpeechRecognition();
                 recognition.continuous = false;
@@ -49,7 +49,6 @@ define([
                 recognition.lang = 'en-US';
             }
 
-            // Fetch app data on initialization
             $scope.$watch('layout', function(newVal) {
                 if (newVal) {
                     fetchAppData();
@@ -58,13 +57,11 @@ define([
             });
 
             function fetchAppData() {
-                // Get app info
                 app.getAppLayout().then(function(layout) {
                     $scope.appName = layout["layout"].qTitle || 'QlikSense App';
                     $scope.$apply();
                 });
 
-                // Create hypercube to fetch all app data
                 const hypercubeDef = {
                     qDimensions: [],
                     qMeasures: [],
@@ -76,7 +73,6 @@ define([
                     }]
                 };
 
-                // Get all fields and create dimensions/measures
                 app.getList('FieldList').then(function(reply) {
                     console.log("reply", reply.layout.qFieldList.qItems);
                     const fields = reply.layout.qFieldList.qItems;
@@ -104,21 +100,19 @@ define([
                         }
                     });
 
-                    // Create hypercube object
                     app.createCube(hypercubeDef).then(function(model) {
                         model.getLayout().then(function(layout) {
                             console.log("data-layout", layout);
                             hypercubeData = {
                                 dimensions: layout.qHyperCube.qDimensionInfo,
                                 measures: layout.qHyperCube.qMeasureInfo,
-                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qMatrix : []
+                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : []
                             };
                         });
                     });
                 });
             }
 
-            // Process object data
             const objects = $scope.$parent.layout.props.objects;
             console.log(objects);
 
@@ -204,18 +198,15 @@ define([
                 const $roleSelect = $element.find('.role-select');
                 const $downloadBtn = $element.find('.download-history');
 
-                // Toggle chatbot
                 $toggle.on('click', function() {
                     $chatbot.addClass('active');
                     $input.focus();
                 });
 
-                // Close chatbot
                 $close.on('click', function() {
                     $chatbot.removeClass('active');
                 });
 
-                // Send message
                 $sendBtn.on('click', sendMessage);
                 $input.on('keypress', function(e) {
                     if (e.which === 13) {
@@ -223,19 +214,15 @@ define([
                     }
                 });
 
-                // Voice input
                 $voiceBtn.on('click', toggleVoiceInput);
 
-                // Role selection
                 $roleSelect.on('change', function() {
                     selectedRole = $(this).val();
                     addMessage('system', `Role changed to: ${selectedRole}`);
                 });
 
-                // Download history
                 $downloadBtn.on('click', downloadChatHistory);
 
-                // Initialize with welcome message
                 addMessage('bot', `Hello! I'm your AI assistant for ${$scope.appName || 'this QlikSense app'}. I can help you analyze your data and create interactive visualizations. Try asking me to "create a chart" or "show me a graph"!`);
             }
 
@@ -245,14 +232,11 @@ define([
 
                 if (!message) return;
 
-                // Add user message
                 addMessage('user', message);
                 $input.val('');
 
-                // Show typing indicator
                 showTypingIndicator();
 
-                // Send to AI API
                 processWithAI(message);
             }
 
@@ -261,7 +245,6 @@ define([
                 return chartKeywords.some(keyword => lowerQuery.includes(keyword));
             }
 
-            // Modify processWithAI to update the chart on drilldown
             async function processWithAI(query) {
                 MainData.push(hypercubeData);
 
@@ -281,7 +264,7 @@ define([
 
                 const endpoint = `deployments/${model}/chat/completions`;
                 const url = `${baseUrl}${endpoint}`;
-                const temp = 0.2; // Ranges 0-2
+                const temp = 0.2;
 
                 let Data = JSON.stringify(hypercubeData);
                 let prompt = `You are ${selectedRole}, You are a highly skilled health insurance business analyst. Utilize the JSON data provided below after 'data:', which includes information claims data. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.  response should be pointwise in use html elements`;
@@ -412,10 +395,9 @@ define([
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
-                            console.log('AI Response:', chartResponse); // Debugging
-                            // Update the existing chart
+                            console.log('AI Response:', chartResponse);
                             if (lastContainerId) {
-                                console.log('lastContainerId:', lastContainerId); // Debugging
+                                console.log('lastContainerId:', lastContainerId);
                                 generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
                             } else {
                                 addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
@@ -475,16 +457,13 @@ define([
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
 
-                // Generate chart if chartConfig is provided
                 if (chartConfig) {
-                    lastContainerId = `chart_${messageId}`; // Store the container ID
-                    // Using $timeout to ensure DOM is ready
+                    lastContainerId = `chart_${messageId}`;
                     $timeout(() => {
                         generateChart(lastContainerId, chartConfig, chartType);
                     }, 300);
                 }
 
-                // Add to chat history
                 chatHistory.push({
                     sender: sender,
                     message: message,
@@ -494,18 +473,27 @@ define([
             }
 
             function generateChart(containerId, chartConfig, chartType) {
+                console.log('Highcharts:', Highcharts); // Check if Highcharts is defined
+                console.log('containerId:', containerId); // Check if containerId is defined
+
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
-                // Clear previous content
                 container.innerHTML = '';
 
                 try {
-                    // Initialize Highcharts
-                    Highcharts.chart(containerId, chartConfig);
+                    if (highcharts3DLoaded || chartType !== 'column3d' && chartType !== 'pie3d') {
+                        Highcharts.chart(containerId, chartConfig); // Line 510
+                    } else {
+                        console.warn('Highcharts 3D not loaded, rendering a 2D chart instead.');
+                        // Optionally, modify the chartConfig to render a 2D chart
+                        chartConfig.chart.type = 'column'; // Or 'pie', etc.
+                        delete chartConfig.chart.options3d; // Remove 3D options
+                        Highcharts.chart(containerId, chartConfig);
+                    }
                 } catch (error) {
                     console.error('Highcharts Error:', error);
                 }
@@ -576,42 +564,7 @@ define([
                 linkElement.click();
             }
 
-            // Global functions for message controls
-            window.speakText = function(text) {
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.rate = 0.8;
-                    utterance.pitch = 1;
-                    speechSynthesis.speak(utterance);
-                } else {
-                    alert('Text-to-speech is not supported in your browser.');
-                }
-            };
-
-            window.copyToClipboard = function(text) {
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        // Show temporary feedback
-                        const feedback = document.createElement('div');
-                        feedback.textContent = 'Copied!';
-                        feedback.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; z-index: 10001;';
-                        document.body.appendChild(feedback);
-                        setTimeout(() => document.body.removeChild(feedback), 2000);
-                    });
-                } else {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                }
-            };
-
-            // Cleanup function
             $scope.$on('$destroy', function() {
-                // Destroy all chart instances
                 Object.values(chartInstances).forEach(chart => {
                     // Highcharts charts don't need explicit disposal
                 });
