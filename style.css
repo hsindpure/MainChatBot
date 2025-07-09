@@ -4,16 +4,23 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://code.highcharts.com/highcharts.js', // Highcharts CDN
+    'https://code.highcharts.com/highcharts.js' ,// Highcharts CDN
     'https://code.highcharts.com/highcharts-3d.js' // Highcharts 3D CDN
-], function($, qlik, props, template, cssContent, Highcharts, Highcharts3D) {
+], function($, qlik, props, template, cssContent, Highcharts) { // Removed Highcharts3D from arguments
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
 
-    // Apply Highcharts 3D
-    Highcharts3D(Highcharts);
+    // Apply Highcharts 3D - Moved inside the define callback
+    require(['https://code.highcharts.com/highcharts-3d.js'], function(Highcharts3D) {
+        if (Highcharts3D) {
+            Highcharts3D(Highcharts);
+            console.log('Highcharts 3D module loaded and applied.');
+        } else {
+            console.error('Highcharts 3D module failed to load.');
+        }
+    });
 
     return {
         template: template,
@@ -104,7 +111,7 @@ define([
                             hypercubeData = {
                                 dimensions: layout.qHyperCube.qDimensionInfo,
                                 measures: layout.qHyperCube.qMeasureInfo,
-                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : []
+                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qMatrix : []
                             };
                         });
                     });
