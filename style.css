@@ -4,8 +4,9 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
-], function($, qlik, props, template, cssContent, echarts) {
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js', // ECharts CDN
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' // XLSX CDN
+], function($, qlik, props, template, cssContent, echarts, XLSX) {
     'use strict';
 
     // Add CSS to document head
@@ -27,6 +28,7 @@ define([
             let currentChartType = null; // Track the current chart type
             let currentChartContainerId = null; // Track the current chart container ID
             let lastChartConfig = null; // Store the last chart configuration
+            let previousChartConfig = null; // Store the previous chart configuration for "Go Back"
 
             // Chart-related keywords for detection
             const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
@@ -449,14 +451,32 @@ define([
                 // Clear previous content
                 container.innerHTML = '';
 
+                // Add "Go Back" and "Export to Excel" buttons
+                const buttonsHtml = `
+                    <div class="chart-controls">
+                        <button class="go-back-button">Go Back</button>
+                        <button class="export-excel-button">Export to Excel</button>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', buttonsHtml);
+
                 // Initialize chart
                 const myChart = echarts.init(container);
+
+                // Add tooltip for hover effect
+                chartConfig.tooltip = {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b} : {c} ({d}%)' // Customize as needed
+                };
 
                 // Set chart options
                 myChart.setOption(chartConfig);
 
                 // Add click event listener for drilldown
                 myChart.on('click', function(params) {
+                    // Store the current chart config as the previous config
+                    previousChartConfig = JSON.parse(JSON.stringify(chartConfig));
+
                     // Handle drilldown logic here - Modify chart directly
                     if (lastChartConfig && lastChartConfig.series) {
                         // Example: Filter data based on the clicked data point
@@ -471,8 +491,23 @@ define([
                             series: newData
                         };
 
+                        chartConfig = newChartConfig; // Update the chartConfig
                         myChart.setOption(newChartConfig);
                     }
+                });
+
+                // "Go Back" button functionality
+                container.querySelector('.go-back-button').addEventListener('click', function() {
+                    if (previousChartConfig) {
+                        myChart.setOption(previousChartConfig);
+                        chartConfig = previousChartConfig; // Restore the chartConfig
+                        previousChartConfig = null; // Clear the previous config
+                    }
+                });
+
+                // "Export to Excel" button functionality
+                container.querySelector('.export-excel-button').addEventListener('click', function() {
+                    exportChartToExcel(chartConfig);
                 });
 
                 // Save chart instance
@@ -483,6 +518,22 @@ define([
                     myChart.resize();
                 });
                 resizeObserver.observe(container);
+            }
+
+            function exportChartToExcel(chartConfig) {
+                // Extract data from chart configuration
+                const headers = [chartConfig.xAxis.name || 'Category', chartConfig.series[0].name || 'Value'];
+                const data = chartConfig.xAxis.data.map((category, index) => [category, chartConfig.series[0].data[index]]);
+
+                // Create a new workbook
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+                // Add the worksheet to the workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Chart Data');
+
+                // Generate the Excel file
+                XLSX.writeFile(wb, 'chart_data.xlsx');
             }
 
             function showTypingIndicator() {
@@ -594,3 +645,30 @@ define([
         }]
     };
 });
+
+
+
+
+                    .chart-controls {
+    display: flex;
+    justify-content: flex-end; /* Align buttons to the right */
+    margin-top: 10px;
+}
+
+.chart-controls button {
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 12px;
+    margin-left: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.chart-controls button:hover {
+    opacity: 0.8;
+}
