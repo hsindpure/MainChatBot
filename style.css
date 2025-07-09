@@ -302,7 +302,8 @@ define([
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
                     2. "chartConfig": A complete ECharts configuration object (in JSON format)
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+                    3. "chartType": The type of chart (bar, line, pie, scatter, stacked bar, area, boxplot, radar, geo, tree, treemap, sankey, funnel, gauge))
+
 
                     The chartConfig should include:
                     - xAxis: with type and data
