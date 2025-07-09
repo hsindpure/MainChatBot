@@ -254,9 +254,9 @@ define([
 				
 				console.log(query);
 
-            const decryptedKey = "iIlAMndlLC6KyAnSNRBMAI6IAkToikpWf7wDCyi9tRNGIaHr";
+            const decryptedKey = "key";
 
-                const baseUrl = "https://stg1.mmc-dallas-int-non-prod-ingress.mgti.mmc.com/coreapi/openai/v1/";
+                const baseUrl = "url";
 
 
                 let model;
