@@ -4,20 +4,12 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js', // ECharts CDN
-    'https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js' // ECharts GL for 3D
-], function($, qlik, props, template, cssContent, echarts, echartsGL) {
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
+], function($, qlik, props, template, cssContent, echarts) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
-
-          if (echarts && echartsGL) {
-        echarts.use(echartsGL);
-    } else {
-        console.error("ECharts or ECharts GL failed to load!");
-    }
-
 
     return {
         template: template,
@@ -36,7 +28,7 @@ define([
             let lastContainerId = null; // Track the last chart container ID
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', '3d chart'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -304,12 +296,12 @@ define([
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
                     2. "chartConfig": A complete ECharts configuration object (in JSON format)
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.). Consider 3D chart types where appropriate (e.g., scatter3D, bar3D).
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
 
                     The chartConfig should include:
                     - xAxis: with type and data
                     - yAxis: with type
-                    - series: with type, data, and name.  For 3D charts, use xAxis3D, yAxis3D, zAxis3D, and series with type like 'scatter3D' or 'bar3D'.
+                    - series: with type, data, and name
 
                     Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.  Ensure the configuration is valid JSON.
 
@@ -331,22 +323,6 @@ define([
                             }]
                         },
                         "chartType": "bar"
-                    }
-
-                    Example format (3D Scatter Chart):
-                    {
-                        "message": "Here's a 3D scatter chart showing...",
-                        "chartConfig": {
-                            "xAxis3D": { "type": "category", "data": ["X1", "X2"] },
-                            "yAxis3D": { "type": "category", "data": ["Y1", "Y2"] },
-                            "zAxis3D": { "type": "value" },
-                            "series": [{
-                                "data": [[0, 0, 10], [1, 1, 20]],
-                                "type": "scatter3D",
-                                "name": "Dataset Label"
-                            }]
-                        },
-                        "chartType": "scatter3D"
                     }`;
                 }
 
@@ -383,7 +359,12 @@ define([
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
-                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
+                            // Update the existing chart
+                            if (lastContainerId) {
+                                generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
+                            } else {
+                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
+                            }
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
                             addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
@@ -542,12 +523,12 @@ define([
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
                     2. "chartConfig": A complete ECharts configuration object (in JSON format)
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.). Consider 3D chart types where appropriate (e.g., scatter3D, bar3D).
+                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
 
                     The chartConfig should include:
                     - xAxis: with type and data
                     - yAxis: with type
-                    - series: with type, data, and name.  For 3D charts, use xAxis3D, yAxis3D, zAxis3D, and series with type like 'scatter3D' or 'bar3D'.
+                    - series: with type, data, and name
 
                     Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.  Ensure the configuration is valid JSON.
 
@@ -569,22 +550,6 @@ define([
                             }]
                         },
                         "chartType": "bar"
-                    }
-
-                    Example format (3D Scatter Chart):
-                    {
-                        "message": "Here's a 3D scatter chart showing...",
-                        "chartConfig": {
-                            "xAxis3D": { "type": "category", "data": ["X1", "X2"] },
-                            "yAxis3D": { "type": "category", "data": ["Y1", "Y2"] },
-                            "zAxis3D": { "type": "value" },
-                            "series": [{
-                                "data": [[0, 0, 10], [1, 1, 20]],
-                                "type": "scatter3D",
-                                "name": "Dataset Label"
-                            }]
-                        },
-                        "chartType": "scatter3D"
                     }`;
                 }
 
