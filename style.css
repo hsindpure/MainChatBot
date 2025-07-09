@@ -449,16 +449,16 @@ define([
                 }
 
                 // Clear previous content
-                container.innerHTML = '';
+                $(container).empty();
 
-                // Add "Go Back" and "Export to Excel" buttons
-                const buttonsHtml = `
+                // Add "Go Back" and "Export to Excel" buttons using jQuery
+                const $buttonsHtml = $(`
                     <div class="chart-controls">
                         <button class="go-back-button">Go Back</button>
                         <button class="export-excel-button">Export to Excel</button>
                     </div>
-                `;
-                container.insertAdjacentHTML('beforeend', buttonsHtml);
+                `);
+                $(container).append($buttonsHtml);
 
                 // Initialize chart
                 const myChart = echarts.init(container);
@@ -496,8 +496,8 @@ define([
                     }
                 });
 
-                // "Go Back" button functionality
-                container.querySelector('.go-back-button').addEventListener('click', function() {
+                // "Go Back" button functionality using jQuery
+                $(container).find('.go-back-button').on('click', function() {
                     if (previousChartConfig) {
                         myChart.setOption(previousChartConfig);
                         chartConfig = previousChartConfig; // Restore the chartConfig
@@ -505,8 +505,8 @@ define([
                     }
                 });
 
-                // "Export to Excel" button functionality
-                container.querySelector('.export-excel-button').addEventListener('click', function() {
+                // "Export to Excel" button functionality using jQuery
+                $(container).find('.export-excel-button').on('click', function() {
                     exportChartToExcel(chartConfig);
                 });
 
@@ -645,30 +645,3 @@ define([
         }]
     };
 });
-
-
-
-
-                    .chart-controls {
-    display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    margin-top: 10px;
-}
-
-.chart-controls button {
-    background-color: #4CAF50; /* Green */
-    border: none;
-    color: white;
-    padding: 5px 10px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 12px;
-    margin-left: 5px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.chart-controls button:hover {
-    opacity: 0.8;
-}
