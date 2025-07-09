@@ -2,21 +2,16 @@ define([
     'jquery',
     'qlik',
     './properties',
-	
+    
     'text!./template.html',
     'text!./style.css',
-	'https://cdn.jsdelivr.net/npm/chart.js'
-	
+    'https://cdn.jsdelivr.net/npm/chart.js'
+    
 ], function($, qlik, props, template, cssContent) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
-
-       // $('<script>').attr('src', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js').appendTo('head');
-    // Load Chart.js library
-   /* if (!window.Chart) {
-    }*/
 
     return {
         template: template,
@@ -262,14 +257,12 @@ define([
             async function processWithAI(query) {
                 MainData.push(hypercubeData);
                 
-				  const decryptedKey = "iIlAMndlLC6KyAnSNRBMAI6IAkToikpWf7wDCyi9tRNGIaHr";
- //   console.log("Decrypted Key:", decryptedKey);
+                const decryptedKey = "iIlAMndlLC6KyAnSNRBMAI6IAkToikpWf7wDCyi9tRNGIaHr";
 
                 const baseUrl = "https://stg1.mmc-dallas-int-non-prod-ingress.mgti.mmc.com/coreapi/openai/v1/";
 
-
- let model;
- let context = '4o';
+                let model;
+                let context = '4o';
                 if (context === '8k') {
                     model = "mmc-tech-gpt-35-turbo-smart-latest";
                 } else if (context === '16k') {
@@ -284,7 +277,6 @@ define([
                 
                 let Data = JSON.stringify(hypercubeData);
                 let prompt = `You are ${selectedRole}, You are a highly skilled health insurance business analyst. Utilize the JSON data provided below after 'data:', which includes information claims data. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.  response should be pointwise in use html elements`;
-
 
                 switch (selectedRole) {
                     case 'Analyst':
@@ -342,7 +334,6 @@ define([
                     }`;
                 }
 
-
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -396,12 +387,12 @@ define([
                 const messageId = 'msg_' + Date.now();
                 
                 let messageClass = sender === 'user' ? 'user-message' : 'bot-message';
-                let icon = sender === 'user' ? '👤' : '🤖';
+                let icon = sender === 'user' ? '\ud83d\udc64' : '\ud83e\udd16';
                 let name = sender === 'user' ? currentUser : 'AI Assistant';
                 
                 if (sender === 'system') {
                     messageClass = 'system-message';
-                    icon = '⚙️';
+                    icon = '\u2699\ufe0f';
                     name = 'System';
                 }
 
@@ -447,26 +438,20 @@ define([
             }
 
             function generateChart(containerId, chartConfig) {
-			console.log(containerId,chartConfig);
+                console.log(containerId, chartConfig);
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
-                // Create canvas element
+                // Clear previous content and create a single canvas
+                container.innerHTML = '';
                 const canvas = document.createElement('canvas');
                 canvas.width = 400;
                 canvas.height = 300;
                 container.appendChild(canvas);
 
-					container.innerHTML = '';
-                    container.appendChild(canvas);
-
-                // Add loading state
-                //container.innerHTML = '<div class="chart-loading">Generating chart...</div>';
-                
-                // Wait for Chart.js to load
                 const initChart = () => {
                     if (typeof Chart === 'undefined') {
                         setTimeout(initChart, 100);
@@ -476,66 +461,61 @@ define([
                     container.innerHTML = '';
                     container.appendChild(canvas);
 
+                    const enhancedConfig = {
+                        ...chartConfig,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            interaction: {
+                                intersect: true,
+                                mode: 'index'
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                tooltip: {
+                                    enabled: true,
+                                    mode: 'index',
+                                    intersect: false
+                                }
+                            },
+                            onClick: (event, elements) => {
+                                console.log(elements);
+                                if (elements.length > 0) {
+                                    const element = elements[0];
+                                    const dataIndex = element.index;
+                                    const datasetIndex = element.datasetIndex;
+                                    const label = chartConfig.data.labels[dataIndex];
+                                    const value = chartConfig.data.datasets[datasetIndex].data[dataIndex];
 
+                                    // Create drilldown query
+                                    const drilldownQuery = `Tell me more about ${label} with value ${value}`;
 
-const enhancedConfig = {
-    ...chartConfig,
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        interaction: {
-            intersect: true,
-            mode: 'index'
-        },
-        plugins: {
-            legend: {
-                display: true,
-                position: 'top'
-            },
-            tooltip: {
-                enabled: true,
-                mode: 'index',
-                intersect: false
-            },
-            // Add event handlers here
-            custom: {
-                onClick: (event, elements) => {
-                    console.log(elements);
-                    if (elements.length > 0) {
-                        const element = elements[0];
-                        const dataIndex = element.index;
-                        const label = chartConfig.data.labels[dataIndex];
-                        const value = chartConfig.data.datasets[element.datasetIndex].data[dataIndex];
-                        
-                        // Create drilldown query
-                        const drilldownQuery = `Tell me more about ${label} with value ${value}`;
-                        
-                        // Add drilldown message
-                        addMessage('user', `[Drilldown] ${drilldownQuery}`);
-                        showTypingIndicator();
-                        processWithAI(drilldownQuery);
-                    }
-                },
-                onHover: (event, elements) => {
-                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                }
-            }
-        },
-        ...chartConfig.options
-    }
-};
+                                    // Add drilldown message
+                                    addMessage('user', `[Drilldown] ${drilldownQuery}`);
+                                    showTypingIndicator();
+                                    processWithAI(drilldownQuery);
+                                }
+                            },
+                            onHover: (event, elements) => {
+                                if (event.native) {
+                                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                                }
+                            },
+                            ...chartConfig.options
+                        }
+                    };
 
                     try {
                         // Destroy existing chart if it exists
                         if (chartInstances[containerId]) {
                             chartInstances[containerId].destroy();
                         }
-
-                        // Create new chart
-						
-						console.log(enhancedConfig);
+                        console.log(enhancedConfig);
                         chartInstances[containerId] = new Chart(canvas, enhancedConfig);
-                        
+
                         // Add resize observer for responsiveness
                         const resizeObserver = new ResizeObserver(() => {
                             if (chartInstances[containerId]) {
@@ -543,7 +523,7 @@ const enhancedConfig = {
                             }
                         });
                         resizeObserver.observe(container);
-                        
+
                     } catch (error) {
                         console.error('Error creating chart:', error);
                         container.innerHTML = '<div class="chart-error">Error generating chart. Please try again.</div>';
