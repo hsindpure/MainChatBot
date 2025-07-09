@@ -4,13 +4,17 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://d3js.org/d3.v7.min.js', // D3.js CDN
-    'https://unpkg.com/d3-3d@1' // D3 3D CDN (or host locally)
-], function($, qlik, props, template, cssContent, d3, d33d) {
+    'https://cdn.amcharts.com/lib/4/core.js',
+    'https://cdn.amcharts.com/lib/4/charts.js',
+    'https://cdn.amcharts.com/lib/4/themes/animated.js'
+], function($, qlik, props, template, cssContent, am4core, am4charts, am4themes_animated) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
+
+    // Apply amCharts theme
+    am4core.useTheme(am4themes_animated.default);
 
     return {
         template: template,
@@ -28,7 +32,7 @@ define([
             let currentChartType = null;
             let lastContainerId = null;
 
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'column chart', '3d chart', '3d graph', '3d plot'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'column chart'];
 
             if ('webkitSpeechRecognition' in window) {
                 recognition = new webkitSpeechRecognition();
@@ -94,7 +98,7 @@ define([
                             hypercubeData = {
                                 dimensions: layout.qHyperCube.qDimensionInfo,
                                 measures: layout.qHyperCube.qMeasureInfo,
-                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : []
+                                data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qMatrix : []
                             };
                         });
                     });
@@ -274,36 +278,47 @@ define([
                 const isChartRequest = detectChartRequest(query);
 
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert using D3.js. Based on the QlikSense data provided, create a data structure suitable for rendering a D3.js chart.
+                    prompt = `You are ${selectedRole}, a data visualization expert using amCharts. Based on the QlikSense data provided, create an amCharts configuration object for the user's request.
 
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart.
-                    2. "chartData": A data structure (JSON array) suitable for D3.js.  This should be an array of objects, where each object represents a data point.  Include the data itself, labels, and any other information needed to render the chart.
-                    3. "chartType": The type of chart (bar, line, pie, scatter, column, etc.).  If the chart is 3D, specify that in the chartType.
+                    2. "chartConfig": A complete amCharts configuration object (in JSON format).
+                    3. "chartType": The type of chart (bar, line, pie, scatter, column, etc.).
 
-                    For example, for a bar chart:
+                    The chartConfig should include:
+                    - "type": The chart type (e.g., "XYChart", "PieChart").
+                    - "data": An array of data objects.
+                    - "xAxes" or "yAxes": Axis configurations.
+                    - "series": Series configurations.
 
+                    Example format (Column Chart):
                     {
-                        "message": "Here's a bar chart showing...",
-                        "chartData": [
-                            {"label": "Label1", "value": 10},
-                            {"label": "Label2", "value": 20}
-                        ],
-                        "chartType": "bar"
+                        "message": "Here's a column chart showing...",
+                        "chartConfig": {
+                            "type": "XYChart",
+                            "data": [
+                                {"category": "Label1", "value": 10},
+                                {"category": "Label2", "value": 20}
+                            ],
+                            "xAxes": [{
+                                "type": "CategoryAxis",
+                                "dataFields": { "category": "category" }
+                            }],
+                            "yAxes": [{
+                                "type": "ValueAxis"
+                            }],
+                            "series": [{
+                                "type": "ColumnSeries",
+                                "dataFields": {
+                                    "valueY": "value",
+                                    "categoryX": "category"
+                                }
+                            }]
+                        },
+                        "chartType": "column"
                     }
 
-                    For a 3D scatter plot:
-
-                    {
-                        "message": "Here's a 3D scatter plot showing...",
-                        "chartData": [
-                            {"x": 1, "y": 2, "z": 3, "label": "Point1"},
-                            {"x": 4, "y": 5, "z": 6, "label": "Point2"}
-                        ],
-                        "chartType": "scatter3d"
-                    }
-
-                    Do NOT include any D3.js code in your response.  Only provide the data structure.
+                    Do NOT include any amCharts code outside of the chartConfig object.
                     `;
                 }
 
@@ -343,9 +358,9 @@ define([
                             console.log('AI Response:', chartResponse);
                             if (lastContainerId) {
                                 console.log('lastContainerId:', lastContainerId);
-                                generateChart(lastContainerId, chartResponse.chartData, chartResponse.chartType);
+                                generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
                             } else {
-                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartData, chartResponse.chartType);
+                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
                             }
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
@@ -362,7 +377,7 @@ define([
                 }
             }
 
-            function addMessage(sender, message, chartData = null, chartType = null) {
+            function addMessage(sender, message, chartConfig = null, chartType = null) {
                 const $messages = $element.find('.chat-messages');
                 const timestamp = new Date().toLocaleTimeString();
                 const messageId = 'msg_' + Date.now();
@@ -386,7 +401,7 @@ define([
                                 <span class="timestamp">${timestamp}</span>
                             </div>
                             <div class="message-text">${message}</div>
-                            ${chartData ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
+                            ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
                             <div class="hear-responce ${sender}">
                                 <button class="speak-button" onclick="speakText('${message.replace(/'/g, "\\'")}')">
                                     <i class="fas fa-volume-up"></i>
@@ -402,10 +417,10 @@ define([
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
 
-                if (chartData) {
+                if (chartConfig) {
                     lastContainerId = `chart_${messageId}`;
                     $timeout(() => {
-                        generateChart(lastContainerId, chartData, chartType);
+                        generateChart(lastContainerId, chartConfig, chartType);
                     }, 300);
                 }
 
@@ -413,11 +428,11 @@ define([
                     sender: sender,
                     message: message,
                     timestamp: timestamp,
-                    chartData: chartData
+                    chartConfig: chartConfig
                 });
             }
 
-            function generateChart(containerId, chartData, chartType) {
+            function generateChart(containerId, chartConfig, chartType) {
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
@@ -426,105 +441,44 @@ define([
 
                 container.innerHTML = ''; // Clear previous content
 
-                const width = container.offsetWidth;
-                const height = container.offsetHeight;
+                try {
+                    // Create chart instance
+                    let chart = am4core.create(containerId, am4core[chartConfig.type]);
 
-                // Create SVG element
-                const svg = d3.select(container)
-                    .append('svg')
-                    .attr('width', width)
-                    .attr('height', height);
+                    // Set data
+                    chart.data = chartConfig.data;
 
-                if (chartType === 'bar') {
-                    // Example D3 bar chart
-                    const xScale = d3.scaleBand()
-                        .domain(chartData.map(d => d.label))
-                        .range([0, width])
-                        .padding(0.1);
-
-                    const yScale = d3.scaleLinear()
-                        .domain([0, d3.max(chartData, d => d.value)])
-                        .range([height, 0]);
-
-                    svg.selectAll('.bar')
-                        .data(chartData)
-                        .enter().append('rect')
-                        .attr('class', 'bar')
-                        .attr('x', d => xScale(d.label))
-                        .attr('y', d => yScale(d.value))
-                        .attr('width', xScale.bandwidth())
-                        .attr('height', d => height - yScale(d.value))
-                        .attr('fill', 'steelblue');
-
-                    // Add axes (simplified)
-                    svg.append('g')
-                        .attr('transform', `translate(0, ${height})`)
-                        .call(d3.axisBottom(xScale));
-
-                    svg.append('g')
-                        .call(d3.axisLeft(yScale));
-                } else if (chartType === 'scatter3d') {
-                    // Example D3 3D scatter plot (using d3-3d)
-                    const origin = [width / 2, height / 2];
-                    const scale = 20;
-                    let circles = [];
-
-                    const x3d = d33d.x3d()
-                        .scale(scale)
-                        .origin(origin)
-                        .rotateY(0)
-                        .rotateX(0);
-
-                    function processData(data) {
-                        circles = svg.selectAll('circle')
-                            .data(data)
-                            .enter()
-                            .append('circle')
-                            .attr('class', '_3d')
-                            .attr('cx', posPointX)
-                            .attr('cy', posPointY)
-                            .attr('r', 5)
-                            .attr('fill', 'red')
-                            .attr('stroke', '#fff');
+                    // Copy properties from chartConfig to chart
+                    for (let key in chartConfig) {
+                        if (key !== 'type' && key !== 'data') {
+                            chart[key] = chartConfig[key];
+                        }
                     }
 
-                    function posPointX(d) {
-                        return x3d.project(d).x;
+                    // Manually create axes and series based on chart type
+                    if (chartConfig.type === "XYChart") {
+                        // Create axes
+                        let categoryAxis = chart.xAxes.push(new am4charts.CategoryAxis());
+                        categoryAxis.dataFields.category = chartConfig.xAxes[0].dataFields.category;
+
+                        let valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
+
+                        // Create series
+                        let series = chart.series.push(new am4charts[chartConfig.series[0].type]());
+                        series.dataFields.valueY = chartConfig.series[0].dataFields.valueY;
+                        series.dataFields.categoryX = chartConfig.series[0].dataFields.categoryX;
+                    } else if (chartConfig.type === "PieChart") {
+                        // Create series
+                        let series = chart.series.push(new am4charts.PieSeries());
+                        series.dataFields.value = chartConfig.series[0].dataFields.value;
+                        series.dataFields.category = chartConfig.series[0].dataFields.category;
                     }
 
-                    function posPointY(d) {
-                        return x3d.project(d).y;
-                    }
+                    // Store chart instance for later disposal
+                    chartInstances[containerId] = chart;
 
-                    function rotateX(degrees) {
-                        x3d.rotateX(degrees);
-                        svg.selectAll('._3d')
-                            .attr('cx', posPointX)
-                            .attr('cy', posPointY);
-                    }
-
-                    function rotateY(degrees) {
-                        x3d.rotateY(degrees);
-                        svg.selectAll('._3d')
-                            .attr('cx', posPointX)
-                            .attr('cy', posPointY);
-                    }
-
-                    processData(chartData);
-
-                    // Example rotation (you'll need to add UI controls for this)
-                    d3.interval(() => {
-                        rotateY(1);
-                        rotateX(0.5);
-                    }, 50);
-
-                } else {
-                    console.warn('Unsupported chart type:', chartType);
-                    svg.append('text')
-                        .attr('x', width / 2)
-                        .attr('y', height / 2)
-                        .attr('text-anchor', 'middle')
-                        .text('Unsupported chart type: ' + chartType);
+                } catch (error) {
+                    console.error('amCharts Error:', error);
                 }
             }
 
@@ -595,9 +549,9 @@ define([
 
             $scope.$on('$destroy', function() {
                 Object.values(chartInstances).forEach(chart => {
-                    // D3 charts don't need explicit disposal in this simple example,
-                    // but you might need to clean up event listeners or other resources
-                    // in more complex scenarios.
+                    if (chart) {
+                        chart.dispose(); // Dispose of amCharts chart
+                    }
                 });
                 chartInstances = {};
             });
