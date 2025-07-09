@@ -4,25 +4,13 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://code.highcharts.com/highcharts.js' // Highcharts CDN
-], function($, qlik, props, template, cssContent, Highcharts) {
+    'https://d3js.org/d3.v7.min.js', // D3.js CDN
+    'https://unpkg.com/d3-3d@1' // D3 3D CDN (or host locally)
+], function($, qlik, props, template, cssContent, d3, d33d) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
-
-    let highcharts3DLoaded = false; // Flag to track if Highcharts 3D is loaded
-
-    // Load Highcharts 3D
-    require(['https://code.highcharts.com/highcharts-3d.js'], function(Highcharts3D) {
-        if (Highcharts3D) {
-            Highcharts3D(Highcharts);
-            highcharts3DLoaded = true;
-            console.log('Highcharts 3D module loaded and applied.');
-        } else {
-            console.error('Highcharts 3D module failed to load.');
-        }
-    });
 
     return {
         template: template,
@@ -286,79 +274,36 @@ define([
                 const isChartRequest = detectChartRequest(query);
 
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a Highcharts configuration for the user's request.
+                    prompt = `You are ${selectedRole}, a data visualization expert using D3.js. Based on the QlikSense data provided, create a data structure suitable for rendering a D3.js chart.
 
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart.
-                    2. "chartConfig": A complete Highcharts configuration object (in JSON format).
+                    2. "chartData": A data structure (JSON array) suitable for D3.js.  This should be an array of objects, where each object represents a data point.  Include the data itself, labels, and any other information needed to render the chart.
                     3. "chartType": The type of chart (bar, line, pie, scatter, column, etc.).  If the chart is 3D, specify that in the chartType.
 
-                    The chartConfig should include:
-                    - chart: with type (e.g., 'bar', 'line', 'pie', 'column', 'scatter', 'column3d', 'pie3d') and optionally options3d for 3D charts.
-                    - title: with text
-                    - xAxis: with categories or title
-                    - yAxis: with title
-                    - series: with type, data, and name
+                    For example, for a bar chart:
 
-                    Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers. Ensure the configuration is valid JSON.
-
-                    Example format (Column Chart):
                     {
-                        "message": "Here's a column chart showing...",
-                        "chartConfig": {
-                            "chart": {
-                                "type": "column"
-                            },
-                            "title": {
-                                "text": "My Chart"
-                            },
-                            "xAxis": {
-                                "categories": ["Label1", "Label2"]
-                            },
-                            "yAxis": {
-                                "title": {
-                                    "text": "Value"
-                                }
-                            },
-                            "series": [{
-                                "name": "Dataset Label",
-                                "data": [10, 20]
-                            }]
-                        },
-                        "chartType": "column"
+                        "message": "Here's a bar chart showing...",
+                        "chartData": [
+                            {"label": "Label1", "value": 10},
+                            {"label": "Label2", "value": 20}
+                        ],
+                        "chartType": "bar"
                     }
 
-                    Example format (3D Column Chart):
+                    For a 3D scatter plot:
+
                     {
-                        "message": "Here's a 3D column chart showing...",
-                        "chartConfig": {
-                            "chart": {
-                                "type": "column3d",
-                                "options3d": {
-                                    "enabled": true,
-                                    "alpha": 15,
-                                    "beta": 15,
-                                    "depth": 50
-                                }
-                            },
-                            "title": {
-                                "text": "My 3D Chart"
-                            },
-                            "xAxis": {
-                                "categories": ["Label1", "Label2"]
-                            },
-                            "yAxis": {
-                                "title": {
-                                    "text": "Value"
-                                }
-                            },
-                            "series": [{
-                                "name": "Dataset Label",
-                                "data": [10, 20]
-                            }]
-                        },
-                        "chartType": "column3d"
+                        "message": "Here's a 3D scatter plot showing...",
+                        "chartData": [
+                            {"x": 1, "y": 2, "z": 3, "label": "Point1"},
+                            {"x": 4, "y": 5, "z": 6, "label": "Point2"}
+                        ],
+                        "chartType": "scatter3d"
                     }
+
+                    Do NOT include any D3.js code in your response.  Only provide the data structure.
                     `;
                 }
 
@@ -398,9 +343,9 @@ define([
                             console.log('AI Response:', chartResponse);
                             if (lastContainerId) {
                                 console.log('lastContainerId:', lastContainerId);
-                                generateChart(lastContainerId, chartResponse.chartConfig, chartResponse.chartType);
+                                generateChart(lastContainerId, chartResponse.chartData, chartResponse.chartType);
                             } else {
-                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
+                                addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartData, chartResponse.chartType);
                             }
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
@@ -417,7 +362,7 @@ define([
                 }
             }
 
-            function addMessage(sender, message, chartConfig = null, chartType = null) {
+            function addMessage(sender, message, chartData = null, chartType = null) {
                 const $messages = $element.find('.chat-messages');
                 const timestamp = new Date().toLocaleTimeString();
                 const messageId = 'msg_' + Date.now();
@@ -441,7 +386,7 @@ define([
                                 <span class="timestamp">${timestamp}</span>
                             </div>
                             <div class="message-text">${message}</div>
-                            ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
+                            ${chartData ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
                             <div class="hear-responce ${sender}">
                                 <button class="speak-button" onclick="speakText('${message.replace(/'/g, "\\'")}')">
                                     <i class="fas fa-volume-up"></i>
@@ -457,10 +402,10 @@ define([
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
 
-                if (chartConfig) {
+                if (chartData) {
                     lastContainerId = `chart_${messageId}`;
                     $timeout(() => {
-                        generateChart(lastContainerId, chartConfig, chartType);
+                        generateChart(lastContainerId, chartData, chartType);
                     }, 300);
                 }
 
@@ -468,34 +413,118 @@ define([
                     sender: sender,
                     message: message,
                     timestamp: timestamp,
-                    chartConfig: chartConfig
+                    chartData: chartData
                 });
             }
 
-            function generateChart(containerId, chartConfig, chartType) {
-                console.log('Highcharts:', Highcharts); // Check if Highcharts is defined
-                console.log('containerId:', containerId); // Check if containerId is defined
-
+            function generateChart(containerId, chartData, chartType) {
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
-                container.innerHTML = '';
+                container.innerHTML = ''; // Clear previous content
 
-                try {
-                    if (highcharts3DLoaded || chartType !== 'column3d' && chartType !== 'pie3d') {
-                        Highcharts.chart(containerId, chartConfig); // Line 510
-                    } else {
-                        console.warn('Highcharts 3D not loaded, rendering a 2D chart instead.');
-                        // Optionally, modify the chartConfig to render a 2D chart
-                        chartConfig.chart.type = 'column'; // Or 'pie', etc.
-                        delete chartConfig.chart.options3d; // Remove 3D options
-                        Highcharts.chart(containerId, chartConfig);
+                const width = container.offsetWidth;
+                const height = container.offsetHeight;
+
+                // Create SVG element
+                const svg = d3.select(container)
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height);
+
+                if (chartType === 'bar') {
+                    // Example D3 bar chart
+                    const xScale = d3.scaleBand()
+                        .domain(chartData.map(d => d.label))
+                        .range([0, width])
+                        .padding(0.1);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max(chartData, d => d.value)])
+                        .range([height, 0]);
+
+                    svg.selectAll('.bar')
+                        .data(chartData)
+                        .enter().append('rect')
+                        .attr('class', 'bar')
+                        .attr('x', d => xScale(d.label))
+                        .attr('y', d => yScale(d.value))
+                        .attr('width', xScale.bandwidth())
+                        .attr('height', d => height - yScale(d.value))
+                        .attr('fill', 'steelblue');
+
+                    // Add axes (simplified)
+                    svg.append('g')
+                        .attr('transform', `translate(0, ${height})`)
+                        .call(d3.axisBottom(xScale));
+
+                    svg.append('g')
+                        .call(d3.axisLeft(yScale));
+                } else if (chartType === 'scatter3d') {
+                    // Example D3 3D scatter plot (using d3-3d)
+                    const origin = [width / 2, height / 2];
+                    const scale = 20;
+                    let circles = [];
+
+                    const x3d = d33d.x3d()
+                        .scale(scale)
+                        .origin(origin)
+                        .rotateY(0)
+                        .rotateX(0);
+
+                    function processData(data) {
+                        circles = svg.selectAll('circle')
+                            .data(data)
+                            .enter()
+                            .append('circle')
+                            .attr('class', '_3d')
+                            .attr('cx', posPointX)
+                            .attr('cy', posPointY)
+                            .attr('r', 5)
+                            .attr('fill', 'red')
+                            .attr('stroke', '#fff');
                     }
-                } catch (error) {
-                    console.error('Highcharts Error:', error);
+
+                    function posPointX(d) {
+                        return x3d.project(d).x;
+                    }
+
+                    function posPointY(d) {
+                        return x3d.project(d).y;
+                    }
+
+                    function rotateX(degrees) {
+                        x3d.rotateX(degrees);
+                        svg.selectAll('._3d')
+                            .attr('cx', posPointX)
+                            .attr('cy', posPointY);
+                    }
+
+                    function rotateY(degrees) {
+                        x3d.rotateY(degrees);
+                        svg.selectAll('._3d')
+                            .attr('cx', posPointX)
+                            .attr('cy', posPointY);
+                    }
+
+                    processData(chartData);
+
+                    // Example rotation (you'll need to add UI controls for this)
+                    d3.interval(() => {
+                        rotateY(1);
+                        rotateX(0.5);
+                    }, 50);
+
+                } else {
+                    console.warn('Unsupported chart type:', chartType);
+                    svg.append('text')
+                        .attr('x', width / 2)
+                        .attr('y', height / 2)
+                        .attr('text-anchor', 'middle')
+                        .text('Unsupported chart type: ' + chartType);
                 }
             }
 
@@ -566,7 +595,9 @@ define([
 
             $scope.$on('$destroy', function() {
                 Object.values(chartInstances).forEach(chart => {
-                    // Highcharts charts don't need explicit disposal
+                    // D3 charts don't need explicit disposal in this simple example,
+                    // but you might need to clean up event listeners or other resources
+                    // in more complex scenarios.
                 });
                 chartInstances = {};
             });
