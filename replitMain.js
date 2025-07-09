@@ -2,12 +2,10 @@ define([
     'jquery',
     'qlik',
     './properties',
-    
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.jsdelivr.net/npm/chart.js'
-    
-], function($, qlik, props, template, cssContent) {
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
+], function($, qlik, props, template, cssContent, echarts) {
     'use strict';
 
     // Add CSS to document head
@@ -16,11 +14,7 @@ define([
     return {
         template: template,
         definition: props,
-        
-        controller: ['$scope', '$element', function($scope, $element, layout) {
-            
-            console.log($scope);
-            
+        controller: ['$scope', '$element', function($scope, $element) {
             const app = qlik.currApp();
             let MainData = [];
             let hypercubeData = {};
@@ -29,7 +23,8 @@ define([
             let selectedRole = 'Analyst';
             let isListening = false;
             let recognition;
-            let chartInstances = {}; // Track Chart.js instances for cleanup
+            let chartInstances = {}; // Track chart instances for cleanup
+            let currentChartType = null; // Track the current chart type
 
             // Chart-related keywords for detection
             const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
@@ -73,7 +68,7 @@ define([
                 app.getList('FieldList').then(function(reply) {
                     console.log("reply", reply.layout.qFieldList.qItems);
                     const fields = reply.layout.qFieldList.qItems;
-                    
+
                     fields.forEach(function(field, index) {
                         if (index < 20) {
                             if (field.qCardinal < 100) {
@@ -121,44 +116,44 @@ define([
 
             const fetchDataAndProcess = async (objectID) => {
                 const jsonDataArray = [];
-              
+
                 try {
                     const model = await app.getObject(objectID);
                     const layout = model.layout;
                     console.log(model);
-              
+
                     if (!layout.qHyperCube) {
                         return [];
                     }
-              
+
                     const totalDimensions = layout.qHyperCube.qDimensionInfo.length;
                     const totalMeasures = layout.qHyperCube.qMeasureInfo.length;
                     const totalColumns = totalDimensions + totalMeasures;
-              
-                    if(totalColumns === 0) return [];
-              
+
+                    if (totalColumns === 0) return [];
+
                     const totalRows = layout.qHyperCube.qSize.qcy;
                     const pageSize = 500;
                     const totalPages = Math.min(Math.ceil(totalRows / pageSize), 5);
-              
+
                     const headers = layout.qHyperCube.qDimensionInfo
-                                    .map(d => d.qFallbackTitle)
-                                    .concat(layout.qHyperCube.qMeasureInfo.map(m => m.qFallbackTitle))
-                                    .filter(h => h !== undefined);
-              
+                        .map(d => d.qFallbackTitle)
+                        .concat(layout.qHyperCube.qMeasureInfo.map(m => m.qFallbackTitle))
+                        .filter(h => h !== undefined);
+
                     for (let currentPage = 0; currentPage < totalPages; currentPage++) {
                         const qTop = currentPage * pageSize;
                         const qHeight = Math.min(pageSize, totalRows - qTop);
-              
+
                         if (qHeight <= 0) break;
-              
+
                         const dataPages = await model.getHyperCubeData('/qHyperCubeDef', [{
                             qTop,
                             qLeft: 0,
                             qWidth: totalColumns,
                             qHeight
                         }]);
-              
+
                         dataPages[0].qMatrix.forEach(data => {
                             const jsonData = {};
                             headers.forEach((header, index) => {
@@ -176,7 +171,7 @@ define([
 
             let sursa = [];
             let allObjData = [];
-            myArrayObjects.forEach(function (objectID) {
+            myArrayObjects.forEach(function(objectID) {
                 fetchDataAndProcess(objectID).then(jsonDataArray => {
                     console.log(jsonDataArray);
                     allObjData.push(jsonDataArray);
@@ -235,7 +230,7 @@ define([
             function sendMessage() {
                 const $input = $element.find('.chat-input');
                 const message = $input.val().trim();
-                
+
                 if (!message) return;
 
                 // Add user message
@@ -256,10 +251,13 @@ define([
 
             async function processWithAI(query) {
                 MainData.push(hypercubeData);
-                
-                const decryptedKey = "key";
+				
+				console.log(query);
 
-                const baseUrl = "url";
+            const decryptedKey = "iIlAMndlLC6KyAnSNRBMAI6IAkToikpWf7wDCyi9tRNGIaHr";
+
+                const baseUrl = "https://stg1.mmc-dallas-int-non-prod-ingress.mgti.mmc.com/coreapi/openai/v1/";
+
 
                 let model;
                 let context = '4o';
@@ -274,7 +272,7 @@ define([
                 const endpoint = `deployments/${model}/chat/completions`;
                 const url = `${baseUrl}${endpoint}`;
                 const temp = 0.2; // Ranges 0-2
-                
+
                 let Data = JSON.stringify(hypercubeData);
                 let prompt = `You are ${selectedRole}, You are a highly skilled health insurance business analyst. Utilize the JSON data provided below after 'data:', which includes information claims data. Your primary objective is to analyze this data and answer the query asked after the data segment in query:<> format in this message. Always emphasize clarity and correctness in your answers to provide the best possible insights.  response should be pointwise in use html elements`;
 
@@ -293,42 +291,38 @@ define([
                         break;
                 }
                 const isChartRequest = detectChartRequest(query);
-                
+
                 if (isChartRequest) {
-                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request. 
+                    prompt = `You are ${selectedRole}, a data visualization expert. Based on the QlikSense data provided, create a chart configuration for the user's request.
 
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
-                    2. "chartConfig": A complete Chart.js configuration object
+                    2. "chartConfig": A complete ECharts configuration object (in JSON format)
                     3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
-                    
+
                     The chartConfig should include:
-                    - type: chart type
-                    - data: with labels and datasets
-                    - options: with responsive design, plugins, and interactivity
-                    
+                    - xAxis: with type and data
+                    - yAxis: with type
+                    - series: with type, data, and name
+
                     Use the actual data from the provided dataset. Make the chart interactive with hover effects and click handlers.
-                    
+
                     Example format:
                     {
                         "message": "Here's a bar chart showing...",
                         "chartConfig": {
-                            "type": "bar",
-                            "data": {
-                                "labels": ["Label1", "Label2"],
-                                "datasets": [{
-                                    "label": "Dataset Label",
-                                    "data": [10, 20],
-                                    "backgroundColor": ["#667eea", "#764ba2"]
-                                }]
+                            "xAxis": {
+                                "type": "category",
+                                "data": ["Label1", "Label2"]
                             },
-                            "options": {
-                                "responsive": true,
-                                "plugins": {
-                                    "legend": {"display": true}
-                                },
-                                "onClick": true
-                            }
+                            "yAxis": {
+                                "type": "value"
+                            },
+                            "series": [{
+                                "data": [10, 20],
+                                "type": "bar",
+                                "name": "Dataset Label"
+                            }]
                         },
                         "chartType": "bar"
                     }`;
@@ -349,7 +343,9 @@ define([
                             }],
                             temperature: temp,
                             max_tokens: 2000,
-                            response_format: isChartRequest ? { type: "json_object" } : undefined
+                            response_format: isChartRequest ? {
+                                type: "json_object"
+                            } : undefined
                         })
                     });
 
@@ -359,13 +355,13 @@ define([
 
                     const data = await response.json();
                     const aiResponse = data.choices[0].message.content;
-                    
+
                     hideTypingIndicator();
-                    
+
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
-                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig);
+                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
                             addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
@@ -373,7 +369,7 @@ define([
                     } else {
                         addMessage('bot', aiResponse);
                     }
-                    
+
                 } catch (error) {
                     console.error('Error calling AI API:', error);
                     hideTypingIndicator();
@@ -381,15 +377,15 @@ define([
                 }
             }
 
-            function addMessage(sender, message, chartConfig = null) {
+            function addMessage(sender, message, chartConfig = null, chartType = null) {
                 const $messages = $element.find('.chat-messages');
                 const timestamp = new Date().toLocaleTimeString();
                 const messageId = 'msg_' + Date.now();
-                
+
                 let messageClass = sender === 'user' ? 'user-message' : 'bot-message';
                 let icon = sender === 'user' ? '\ud83d\udc64' : '\ud83e\udd16';
                 let name = sender === 'user' ? currentUser : 'AI Assistant';
-                
+
                 if (sender === 'system') {
                     messageClass = 'system-message';
                     icon = '\u2699\ufe0f';
@@ -424,7 +420,7 @@ define([
                 // Generate chart if chartConfig is provided
                 if (chartConfig) {
                     setTimeout(() => {
-                        generateChart(`chart_${messageId}`, chartConfig);
+                        generateChart(`chart_${messageId}`, chartConfig, chartType);
                     }, 100);
                 }
 
@@ -437,100 +433,40 @@ define([
                 });
             }
 
-            function generateChart(containerId, chartConfig) {
-                console.log(containerId, chartConfig);
+            function generateChart(containerId, chartConfig, chartType) {
                 const container = document.getElementById(containerId);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
-                // Clear previous content and create a single canvas
+                // Clear previous content
                 container.innerHTML = '';
-                const canvas = document.createElement('canvas');
-                canvas.width = 400;
-                canvas.height = 300;
-                container.appendChild(canvas);
 
-                const initChart = () => {
-                    if (typeof Chart === 'undefined') {
-                        setTimeout(initChart, 100);
-                        return;
-                    }
+                // Initialize chart
+                const myChart = echarts.init(container);
 
-                    container.innerHTML = '';
-                    container.appendChild(canvas);
+                // Set chart options
+                myChart.setOption(chartConfig);
 
-                    const enhancedConfig = {
-                        ...chartConfig,
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true,
-                            interaction: {
-                                intersect: true,
-                                mode: 'index'
-                            },
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top'
-                                },
-                                tooltip: {
-                                    enabled: true,
-                                    mode: 'index',
-                                    intersect: false
-                                }
-                            },
-                            onClick: (event, elements) => {
-                                console.log(elements);
-                                if (elements.length > 0) {
-                                    const element = elements[0];
-                                    const dataIndex = element.index;
-                                    const datasetIndex = element.datasetIndex;
-                                    const label = chartConfig.data.labels[dataIndex];
-                                    const value = chartConfig.data.datasets[datasetIndex].data[dataIndex];
+                // Add click event listener for drilldown
+                myChart.on('click', function(params) {
+                    // Handle drilldown logic here
+                    console.log('Clicked data:', params);
+                    const drilldownQuery = `show me data for ${params.name}`;
+                   // addMessage('user', `${drilldownQuery}`);
+                    showTypingIndicator();
+                    processWithAI(`${drilldownQuery} , specifically only on for  ${params.name}, in ${params.seriesType} chart`);
+                });
 
-                                    // Create drilldown query
-                                    const drilldownQuery = `Tell me more about ${label} with value ${value}`;
+                // Save chart instance
+                chartInstances[containerId] = myChart;
 
-                                    // Add drilldown message
-                                    addMessage('user', `[Drilldown] ${drilldownQuery}`);
-                                    showTypingIndicator();
-                                    processWithAI(drilldownQuery);
-                                }
-                            },
-                            onHover: (event, elements) => {
-                                if (event.native) {
-                                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                                }
-                            },
-                            ...chartConfig.options
-                        }
-                    };
-
-                    try {
-                        // Destroy existing chart if it exists
-                        if (chartInstances[containerId]) {
-                            chartInstances[containerId].destroy();
-                        }
-                        console.log(enhancedConfig);
-                        chartInstances[containerId] = new Chart(canvas, enhancedConfig);
-
-                        // Add resize observer for responsiveness
-                        const resizeObserver = new ResizeObserver(() => {
-                            if (chartInstances[containerId]) {
-                                chartInstances[containerId].resize();
-                            }
-                        });
-                        resizeObserver.observe(container);
-
-                    } catch (error) {
-                        console.error('Error creating chart:', error);
-                        container.innerHTML = '<div class="chart-error">Error generating chart. Please try again.</div>';
-                    }
-                };
-
-                initChart();
+                // Add resize observer for responsiveness
+                const resizeObserver = new ResizeObserver(() => {
+                    myChart.resize();
+                });
+                resizeObserver.observe(container);
             }
 
             function showTypingIndicator() {
@@ -561,7 +497,7 @@ define([
                 }
 
                 const $voiceBtn = $element.find('.voice-button');
-                
+
                 if (isListening) {
                     recognition.stop();
                     isListening = false;
@@ -588,10 +524,10 @@ define([
 
             function downloadChatHistory() {
                 const dataStr = JSON.stringify(chatHistory, null, 2);
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                
+                const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
                 const exportFileDefaultName = `chat_history_${new Date().toISOString().split('T')[0]}.json`;
-                
+
                 const linkElement = document.createElement('a');
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
@@ -635,7 +571,7 @@ define([
             $scope.$on('$destroy', function() {
                 // Destroy all chart instances
                 Object.values(chartInstances).forEach(chart => {
-                    if (chart) chart.destroy();
+                    if (chart) chart.dispose(); // Use dispose for ECharts
                 });
                 chartInstances = {};
             });
