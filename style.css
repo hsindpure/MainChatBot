@@ -33,7 +33,14 @@ define([
         paint: function ($element, layout) {
             var self = this;
             var app = qlik.currApp(this);
-
+  var config = {
+                        host: window.location.hostname,
+                        port: window.location.port,
+                        prefix: "/",
+                        isSecure: window.location.protocol === "https:",
+                        rejectUnauthorized: false, // Only for development
+                        url: "ws://" + window.location.hostname + ":" + window.location.port + "/app/" + appId
+                    };
             // Get properties from the definition
             var logButtonLabel = layout.properties.logButtonLabel || "Log App Data to Console";
 
