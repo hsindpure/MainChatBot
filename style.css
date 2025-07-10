@@ -1,10 +1,10 @@
-require.config({
-    baseUrl: ".",
-    paths: {
-        "qlik": "/resources",
-    }
-});
+ <label for="appId">Qlik Sense App ID:</label>
+    <input type="text" id="appId" placeholder="Enter App ID">
+    <button id="loadApp">Load App</button>
 
+    <div id="jsonDataContainer">
+        <pre id="jsonData"></pre>
+    </div>
 require(["qlik"], function (qlik) {
     qlik.setOnError(function (error) {
         console.error(error);
