@@ -1,61 +1,89 @@
- <label for="appId">Qlik Sense App ID:</label>
-    <input type="text" id="appId" placeholder="Enter App ID">
-    <button id="loadApp">Load App</button>
+const enigma = require('enigma.js');
+const WebSocket = require('ws');
+const fs = require('fs');
 
-    <div id="jsonDataContainer">
-        <pre id="jsonData"></pre>
-    </div>
-require(["qlik"], function (qlik) {
-    qlik.setOnError(function (error) {
-        console.error(error);
-    });
+// IMPORTANT: Replace with the correct schema version for your Qlik Sense environment.
+const schema = require('enigma.js/schemas/12.612.0'); // Example for Qlik Sense June 2024 Release
 
-    $("#loadApp").click(function() {
-        var appId = $("#appId").val();
+// Configuration for connecting to the Qlik Sense Engine API.
+const config = {
+  schema,
+  url: 'ws://localhost:4848/app/', // Use the correct WebSocket URI for your environment.
+  createSocket: url => new WebSocket(url, { rejectUnauthorized: false }), // Set to true for production with valid certificates.
+  // Add authentication details if necessary (e.g., certificate paths for Qlik Sense Enterprise).
+  // cert: fs.readFileSync('path/to/client.pem'),
+  // key: fs.readFileSync('path/to/client_key.pem'),
+  // ca: fs.readFileSync('path/to/root.pem'),
+};
 
-        if (!appId) {
-            alert("Please enter a Qlik Sense App ID.");
-            return;
-        }
+async function getAppDetailsAsJson(appId) {
+  const appData = {};
 
-        // Open a Qlik Sense app
-        var app = qlik.openApp(appId, {});
+  try {
+    // 1. Establish a session and open the Qlik Sense app.
+    const session = enigma.create(config);
+    const global = await session.open();
+    const app = await global.openDoc(appId);
 
-        // Get all objects in the app
-        app.getObjects(function(objects) {
-            var allData = {};
+    // 2. Get the app layout.
+    appData.layout = await app.getLayout();
 
-            // Iterate through each object
-            var objectPromises = Object.keys(objects).map(function(objectId) {
-                return new Promise(function(resolve, reject) {
-                    app.getObject(objectId).then(function(object) {
-                        object.getLayout().then(function(layout) {
-                            allData[objectId] = layout;
-                            resolve();
-                        }).catch(function(error) {
-                            console.error("Error getting layout for object " + objectId + ":", error);
-                            allData[objectId] = "Error: " + error.message;
-                            resolve(); // Resolve even on error to continue processing other objects
-                        });
-                    }).catch(function(error) {
-                        console.error("Error getting object " + objectId + ":", error);
-                        allData[objectId] = "Error: " + error.message;
-                        resolve(); // Resolve even on error to continue processing other objects
-                    });
-                });
-            });
+    // 3. Get the app's load script.
+    appData.loadScript = await app.getScript();
 
-            // Wait for all object data to be fetched
-            Promise.all(objectPromises).then(function() {
-                // Convert the data to JSON
-                var jsonData = JSON.stringify(allData, null, 2);
+    // 4. Get a list of dimensions and measures (optional).
+    appData.dimensions = await app.getDimensionList();
+    appData.measures = await app.getMeasureList();
 
-                // Display the JSON in the webpage
-                $("#jsonData").text(jsonData);
-            }).catch(function(error) {
-                console.error("Error processing objects:", error);
-                $("#jsonData").text("Error processing objects. Check the console.");
-            });
-        });
-    });
-});
+    // 5. Get a list of sheets and master objects.
+    appData.sheets = [];
+    const sheets = await app.getObjects({ qType: 'sheet' }); // Get all sheets.
+    for (const sheet of sheets) {
+      const sheetInfo = {
+        id: sheet.qInfo.qId,
+        name: sheet.qMeta.title,
+        objects: [],
+      };
+
+      // Get objects within each sheet (e.g., visualizations).
+      const sheetLayout = await app.getObject(sheet.qInfo.qId).getLayout();
+      for (const object of sheetLayout.qChildren) {
+        const objectInfo = {
+          id: object.qInfo.qId,
+          type: object.qInfo.qType,
+          properties: await app.getObject(object.qInfo.qId).getProperties(), // Get object properties.
+        };
+
+        // You can add more logic here to extract data from visualizations,
+        // using `exportData()` or other methods, depending on your needs.
+        // This is a complex step and requires handling various object types and data formats.
+        // Example for getting chart data (requires downloading a file):
+        // if (object.qInfo.qType === 'chart') {
+        //   const exportResult = await app.getObject(object.qInfo.qId).exportData('OOXML');
+        //   objectInfo.dataExportUrl = `http://localhost:4848${exportResult.qUrl}`;
+        // }
+
+        sheetInfo.objects.push(objectInfo);
+      }
+      appData.sheets.push(sheetInfo);
+    }
+
+    // 6. Close the Qlik Sense app and session.
+    await app.close();
+    await session.close();
+
+  } catch (error) {
+    console.error('Error extracting app data:', error);
+  }
+
+  return appData;
+}
+
+// Example Usage:
+const appId = 'your-app-id'; // Replace with the actual Qlik Sense app ID or name.
+getAppDetailsAsJson(appId)
+  .then(data => {
+    fs.writeFileSync('qliksense_app_data.json', JSON.stringify(data, null, 2)); // Save the data to a JSON file.
+    console.log('App data saved to qliksense_app_data.json');
+  })
+  .catch(error => console.error('Error:', error));
