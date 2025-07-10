@@ -6,7 +6,7 @@ define([
     'text!./style.css',
     'text!./data.json',
     'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js', // ECharts CDN
-    'https://cdn.sheetjs.com/xlsx/v0.18.12/xlsx.full.min.js', // XLSX Library
+    'https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js', // XLSX Library
 ], function($, qlik, props, template, cssContent, jsonData, echarts, XLSX) {
     'use strict';
 
