@@ -4,13 +4,15 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js' // ECharts CDN
-], function($, qlik, props, template, cssContent, echarts) {
+	 'text!./data.json', 
+    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js', // ECharts CDN
+], function($, qlik, props, template, cssContent,jsonData, echarts) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
-
+ var dataObj = JSON.parse(jsonData);
+ console.log(dataObj);
     return {
         template: template,
         definition: props,
@@ -25,9 +27,16 @@ define([
             let recognition;
             let chartInstances = {}; // Track chart instances for cleanup
             let currentChartType = null; // Track the current chart type
+            let currentChartContainerId = null; // Track the current chart container ID
+            let lastChartConfig = null; // Store the last chart configuration
+            let previousChartConfig = null; // Store the previous chart configuration for "Go Back"
+			let chartcontainerheader=null;
+			
+            let sursa = [];
+            let allObjData = [];
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot','bar', 'line', 'pie', 'scatter', 'stacked bar', 'area', 'boxplot', 'radar', 'geo', 'tree', 'treemap', 'sankey', 'funnel', 'gauge'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -168,19 +177,19 @@ define([
                 }
                 return jsonDataArray;
             };
+			
+			
+						myArrayObjects.forEach(function(objectID) {
+							fetchDataAndProcess(objectID).then(jsonDataArray => {
+								//console.log(jsonDataArray);
+								allObjData.push(jsonDataArray);
+								sursa = JSON.stringify(allObjData);
+							   console.log("all Objects Data in string", sursa);
+							}).catch(error => {
+								console.error("Error fetching data:", error);
+							});
+						});
 
-            let sursa = [];
-            let allObjData = [];
-            myArrayObjects.forEach(function(objectID) {
-                fetchDataAndProcess(objectID).then(jsonDataArray => {
-                    console.log(jsonDataArray);
-                    allObjData.push(jsonDataArray);
-                    sursa = JSON.stringify(allObjData);
-                    console.log("all Objects Data in string", sursa);
-                }).catch(error => {
-                    console.error("Error fetching data:", error);
-                });
-            });
 
             function initializeChatbot() {
                 const $chatbot = $element.find('.chatbot-container');
@@ -194,6 +203,7 @@ define([
 
                 // Toggle chatbot
                 $toggle.on('click', function() {
+
                     $chatbot.addClass('active');
                     $input.focus();
                 });
@@ -251,12 +261,13 @@ define([
 
             async function processWithAI(query) {
                 MainData.push(hypercubeData);
-				
-				console.log(query);
 
-            const decryptedKey = "key";
+                console.log(query);
 
-                const baseUrl = "url";
+            const decryptedKey = "iIlAMndlLC6KyAnSNRBMAI6IAkToikpWf7wDCyi9tRNGIaHr";
+
+                const baseUrl = "https://stg1.mmc-dallas-int-non-prod-ingress.mgti.mmc.com/coreapi/openai/v1/";
+
 
 
                 let model;
@@ -298,7 +309,8 @@ define([
                     IMPORTANT: Respond with a JSON object containing:
                     1. "message": A brief explanation of the chart
                     2. "chartConfig": A complete ECharts configuration object (in JSON format)
-                    3. "chartType": The type of chart (bar, line, pie, scatter, etc.)
+                    3. "chartType": The type of chart (bar, line, pie, scatter, stacked bar, area, boxplot, radar, geo, tree, treemap, sankey, funnel, gauge))
+
 
                     The chartConfig should include:
                     - xAxis: with type and data
@@ -319,16 +331,89 @@ define([
                                 "type": "value"
                             },
                             "series": [{
-                                "data": [10, 20],
-                                "type": "bar",
+                                "data": [{value: 14109.47, name: 'TN'}],
+                                "type": "bar || line || pie || scatter || stacked bar || area || boxplot || radar || geo || tree || treemap || sankey || funnel || gauge",
                                 "name": "Dataset Label"
                             }]
                         },
-                        "chartType": "bar"
-                    }`;
+                        "chartType": "bar || line || pie || scatter || stacked bar || area || boxplot || radar || geo || tree || treemap || sankey || funnel || gauge"
+                    }
+					
+					for Geo map use following format :
+					
+						
+						
+						  option = {
+										title: {
+										
+										  
+										  left: 'right'
+										},
+										tooltip: {
+										  trigger: 'item',
+										  showDelay: 0,
+										  transitionDuration: 0.2
+										},
+										visualMap: {
+										  left: 'right',
+										  min: 500000,
+										  max: 38000000,
+										  inRange: {
+											color: [
+											  '#313695',
+											  '#4575b4',
+											  '#74add1',
+											  '#abd9e9',
+											  '#e0f3f8',
+											  '#ffffbf',
+											  '#fee090',
+											  '#fdae61',
+											  '#f46d43',
+											  '#d73027',
+											  '#a50026'
+											]
+										  },
+										  text: ['High', 'Low'],
+										  calculable: true
+										},
+										toolbox: {
+										  show: true,
+										  //orient: 'vertical',
+										  left: 'left',
+										  top: 'top',
+										  feature: {
+											dataView: { readOnly: false },
+											restore: {},
+											saveAsImage: {}
+										  }
+										},
+										series: [
+										  {
+											name: 'Country Data ',
+											type: 'map',
+											roam: true,
+											map: 'USA',
+											emphasis: {
+											  label: {
+												show: true
+											  }
+											},
+											data: [
+											  { name: 'Alabama', value: 4822023 },
+											
+										
+											]
+										  }
+										]
+									  }
+					`;
                 }
-
+				
+				
                 try {
+				
+		
+            console.log("all Objects Data ", sursa);
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
@@ -361,7 +446,10 @@ define([
                     if (isChartRequest) {
                         try {
                             const chartResponse = JSON.parse(aiResponse);
-                            addMessage('bot', chartResponse.message || 'Here\'s your chart:', chartResponse.chartConfig, chartResponse.chartType);
+                            lastChartConfig = chartResponse.chartConfig; // Store the chart config
+                            const messageText = chartResponse.message || 'Here\'s your chart:';
+                            addMessage('bot', messageText, chartResponse.chartConfig, chartResponse.chartType);
+
                         } catch (parseError) {
                             console.error('Error parsing chart response:', parseError);
                             addMessage('bot', 'I encountered an error generating the chart. Here\'s the analysis instead: ' + aiResponse);
@@ -392,6 +480,9 @@ define([
                     name = 'System';
                 }
 
+                
+				message = message.replace(/```html/g, '').replace(/```/g, '').trim();
+				
                 let messageHtml = `
                     <div class="message ${messageClass}" id="${messageId}">
                         <div class="message-content">
@@ -402,25 +493,29 @@ define([
                             </div>
                             <div class="message-text">${message}</div>
                             ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
-                            <div class="hear-responce ${sender}">
-                                <button class="speak-button" onclick="speakText('${message.replace(/'/g, "\\'")}')">
+                            <div class="hear-responce ${sender}" id="chartheading_${messageId}">
+                                <button class="speak-button" >
                                     <i class="fas fa-volume-up"></i>
                                 </button>
-                                <button class="copy-button" onclick="copyToClipboard('${message.replace(/'/g, "\\'")}')">
+                                <button class="copy-response" >
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 `;
+				
 
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
 
                 // Generate chart if chartConfig is provided
                 if (chartConfig) {
+                    currentChartContainerId = `chart_${messageId}`; // Store the container ID
+					
+				chartcontainerheader = `chartheading_${messageId}`;
                     setTimeout(() => {
-                        generateChart(`chart_${messageId}`, chartConfig, chartType);
+                        generateChart(currentChartContainerId, chartcontainerheader,chartConfig, chartType);
                     }, 100);
                 }
 
@@ -433,31 +528,114 @@ define([
                 });
             }
 
-            function generateChart(containerId, chartConfig, chartType) {
+            function generateChart(containerId,chartcontainerheader, chartConfig, chartType) {
+			
+		
+				
                 const container = document.getElementById(containerId);
+				  const containerheader = document.getElementById(chartcontainerheader);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
                 }
 
                 // Clear previous content
-                container.innerHTML = '';
+                $(container).empty();
+				
+					 const $buttonsHtml = $(`
+                    
+                        <button class="go-back-button"><i class="fas fa-arrow-left"></i></button>
+                    
+                `);
+
+                // Add "Go Back" and "Export to Excel" buttons using jQuery
+               
 
                 // Initialize chart
+					if(chartConfig.series[0].type == 'map'){
+					 echarts.registerMap('USA', dataObj);
+					 }
                 const myChart = echarts.init(container);
+				
+			
+			
+                // Add tooltip for hover effect
+                chartConfig.tooltip = {
+                    trigger: 'item'
+                  //  formatter: '{a} <br/>{b} : {c} ({d}%)' // Customize as needed
+                };
 
                 // Set chart options
                 myChart.setOption(chartConfig);
-
+				
                 // Add click event listener for drilldown
                 myChart.on('click', function(params) {
-                    // Handle drilldown logic here
-                    console.log('Clicked data:', params);
-                    const drilldownQuery = `show me data for ${params.name}`;
-                   // addMessage('user', `${drilldownQuery}`);
-                    showTypingIndicator();
-                    processWithAI(`${drilldownQuery} , specifically only on for  ${params.name}, in ${params.seriesType} chart`);
+				
+                $(containerheader).append($buttonsHtml);
+				
+                    // Store the current chart config as the previous config
+                    previousChartConfig = JSON.parse(JSON.stringify(chartConfig));
+
+                    // Handle drilldown logic here - Modify chart directly
+                    if (lastChartConfig && lastChartConfig.series) {
+                        // Example: Filter data based on the clicked data point
+						
+						
+					const newData = lastChartConfig.series.map((series, i) => {
+					  if (series.type == 'line') {
+						return {
+						  ...series,
+						  data: series.data.filter(item => item == params.value) // Example filter
+						};
+					  }else  if (series.type == 'scatter') {
+						return {
+						  ...series,
+						  data: series.data.filter(item => item.value[1] == params.value[1]) // Example filter
+						};
+					  } else {
+						return {
+						  ...series,
+						  data: series.data.filter(item => item.value == params.value) // Example filter
+						};
+					  }
+					});
+						
+						//const newData = lastChartConfig.series.data.filter(item => item === params.value); 
+
+                        // Update the chart options with the filtered data
+                        const newChartConfig = {
+                            ...lastChartConfig,
+                            series: newData
+                        };
+
+                        chartConfig = newChartConfig; // Update the chartConfig
+                        myChart.setOption(newChartConfig);
+                    }
                 });
+
+                // "Go Back" button functionality using jQuery
+				let headerID = "#"+chartcontainerheader ;
+				
+				$(document).on("click",`${headerID} .go-back-button`, function(){
+				console.log("back button clicked");
+               // $(container).find('.go-back-button').on('click', function() {
+                    if (previousChartConfig) {
+					
+                        myChart.setOption(previousChartConfig);
+						
+						if(previousChartConfig.series[0].type == 'bar'){
+						const resizeObserver = new ResizeObserver(() => {
+							myChart.resize();
+						});
+						}
+                        chartConfig = previousChartConfig; // Restore the chartConfig
+                        previousChartConfig = null; // Clear the previous config
+                    }
+					$(this).remove();
+                });
+
+                // "Export to Excel" button functionality using jQuery
+				
 
                 // Save chart instance
                 chartInstances[containerId] = myChart;
@@ -523,7 +701,7 @@ define([
             }
 
             function downloadChatHistory() {
-                const dataStr = JSON.stringify(chatHistory, null, 2);
+                /*const dataStr = JSON.stringify(chatHistory, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
 
                 const exportFileDefaultName = `chat_history_${new Date().toISOString().split('T')[0]}.json`;
@@ -532,40 +710,181 @@ define([
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
                 linkElement.click();
+				
+				
+				*/
+				
+				
+                const pdfContent = chatHistory.map(msg => 
+                    `[${msg.timestamp}] ${msg.user}: ${msg.message}`
+                ).join('\n\n');
+
+                // Create and download file
+                const blob = new Blob([pdfContent], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chatbot_history_${new Date().toISOString().split('T')[0]}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
 
-            // Global functions for message controls
-            window.speakText = function(text) {
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.rate = 0.8;
-                    utterance.pitch = 1;
-                    speechSynthesis.speak(utterance);
-                } else {
-                    alert('Text-to-speech is not supported in your browser.');
-                }
-            };
 
-            window.copyToClipboard = function(text) {
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        // Show temporary feedback
-                        const feedback = document.createElement('div');
-                        feedback.textContent = 'Copied!';
-                        feedback.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; z-index: 10001;';
-                        document.body.appendChild(feedback);
-                        setTimeout(() => document.body.removeChild(feedback), 2000);
-                    });
-                } else {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
+
+			            //response voice start code
+            $(document).ready(function () {
+                let isSpeaking = false;
+                let speechSynthesis = window.speechSynthesis;
+                let utterance;
+                speechSynthesis.cancel();
+                $(document).on('click','.speak-button', function () {
+				var text = $(this).parent().prev().text().trim();
+                    if (isSpeaking) {
+                        stopSpeech(this);
+                    } else {
+                        startSpeech(text,this);
+                    }
+                });
+
+                function startSpeech(text,$this) {
+                    // Get the text from the textarea
+                    
+
+
+                    // Check if the browser supports speech synthesis
+                    if ('speechSynthesis' in window) {
+                        // Create a new speech synthesis utterance
+                        var utterance = new SpeechSynthesisUtterance(text);
+                        isSpeaking = true;
+
+                        // Optionally set properties like voice, pitch, and rate
+                        utterance.pitch = 1; // Range: 0 to 2
+                        utterance.rate = 1;  // Range: 0.1 to 10
+                        utterance.volume = 1; // Range: 0 to 1
+
+                        // Speak the text
+                        window.speechSynthesis.speak(utterance);
+
+                        $($this).html('<i class="fa fa-ban" aria-hidden="true"></i>');
+                        $($this).addClass("active-speech");
+
+
+                        utterance.onend = function () {
+                            isSpeaking = false;
+                            $($this).html('<i class="fa fa-volume-up" aria-hidden="true"></i>');
+                            $($this).removeClass("active-speech");
+                        }
+
+                    } else {
+                        alert('Please enter some text to speak.');
+                    }
                 }
-            };
+
+                function stopSpeech($this) {
+                    if (isSpeaking) {
+                        speechSynthesis.cancel();
+                        isSpeaking = false;
+						    $($this).html('<i class="fa fa-volume-up" aria-hidden="true"></i>');
+                            $($this).removeClass("active-speech");
+                      
+                    }
+                }
+                $(window).on('beforeunload', function () {
+                    stopSpeech();
+                });
+            });
+			
+
+              $(document).on("click", ".copy-response", function () {
+                // Get the parent div
+                const parentDiv = $(this).parent().prev();
+
+                // Get all text inside the child elements of the parent div
+                const textToCopy = parentDiv.text().trim();
+
+                // Create a temporary textarea to hold the text to copy
+                const tempInput = $('<textarea>').val(textToCopy).appendTo('body').select();
+
+                // Copy the text
+                document.execCommand('copy');
+
+                // Remove the temporary textarea
+                tempInput.remove();
+
+                // Optional: Alert the user that the text has been copied
+                //console.log('Text copied to clipboard!');
+            });
+			
+			
+			
+			
+$(document).ready(function() {
+  const keywords = [
+    "@generate the chart",
+    "@create excel"
+  ];
+
+  const $input = $('#commandInput');
+  const $suggestionBox = $('#suggestionBox');
+
+  $input.on('input', function() {
+    const val = $(this).val();
+    const lastChar = val.slice(-1);
+    // Show suggestions when last char is '@'
+    if (lastChar === '@') {
+      showSuggestions('');
+    } else if (val.includes('@')) {
+      // Get the part after '@' for filtering
+      const atIndex = val.lastIndexOf('@');
+      const query = val.slice(atIndex).toLowerCase();
+      showSuggestions(query);
+    } else {
+      $suggestionBox.hide();
+    }
+  });
+
+  function showSuggestions(query) {
+    const filtered = keywords.filter(k => k.toLowerCase().startsWith(query));
+    if (filtered.length === 0) {
+      $suggestionBox.hide();
+      return;
+    }
+    $suggestionBox.empty();
+    filtered.forEach(item => {
+      const $item = $('<div class="suggestion-item"></div>').text(item);
+      $item.on('click', function() {
+        selectSuggestion(item);
+      });
+      $suggestionBox.append($item);
+    });
+    // Position the suggestion box below input
+    const offset = $input.offset();
+    $suggestionBox.show();
+  }
+
+  function selectSuggestion(suggestion) {
+    const val = $input.val();
+    const atIndex = val.lastIndexOf('@');
+    const newVal = val.slice(0, atIndex) + suggestion + ' ';
+    $input.val(newVal);
+    $suggestionBox.hide();
+    $input.focus();
+  }
+});
+
+
+$('#commandInput').on('change', function() {
+  const command = $(this).val().trim();
+  if (command.startsWith("@generate the chart")) {
+    // Generate chart
+  } else if (command.startsWith("@create excel")) {
+    // Create Excel
+  }
+  // Add more commands as needed
+});
+
 
             // Cleanup function
             $scope.$on('$destroy', function() {
