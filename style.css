@@ -1,89 +1,119 @@
-const enigma = require('enigma.js');
-const WebSocket = require('ws');
-const fs = require('fs');
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Qlik Sense Data Mashup</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/enigma.js@2.7.0/enigma.min.js"></script>
+    <script src="https://unpkg.com/enigma.js@2.7.0/schemas/12.612.0.json"></script>
+    <style>
+        #data-container {
+            width: 80%;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
 
-// IMPORTANT: Replace with the correct schema version for your Qlik Sense environment.
-const schema = require('enigma.js/schemas/12.612.0'); // Example for Qlik Sense June 2024 Release
+        #json-output {
+            white-space: pre-wrap; /* Allow line breaks */
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Qlik Sense App Data</h1>
+    <div id="data-container">
+        <pre id="json-output"></pre>
+    </div>
 
-// Configuration for connecting to the Qlik Sense Engine API.
-const config = {
-  schema,
-  url: 'ws://localhost:4848/app/', // Use the correct WebSocket URI for your environment.
-  createSocket: url => new WebSocket(url, { rejectUnauthorized: false }), // Set to true for production with valid certificates.
-  // Add authentication details if necessary (e.g., certificate paths for Qlik Sense Enterprise).
-  // cert: fs.readFileSync('path/to/client.pem'),
-  // key: fs.readFileSync('path/to/client_key.pem'),
-  // ca: fs.readFileSync('path/to/root.pem'),
-};
+    <script>
+        $(document).ready(function() {
+            const appId = 'your-app-id'; // Replace with your Qlik Sense app ID
 
-async function getAppDetailsAsJson(appId) {
-  const appData = {};
+            // Qlik Sense Configuration
+            const qlikConfig = {
+                host: 'localhost', // Replace with your Qlik Sense server address
+                port: 4848, // Default Qlik Sense port
+                prefix: '/', // Default prefix
+                isSecure: false, // Set to true if using HTTPS
+                appId: appId
+            };
 
-  try {
-    // 1. Establish a session and open the Qlik Sense app.
-    const session = enigma.create(config);
-    const global = await session.open();
-    const app = await global.openDoc(appId);
+            // Enigma.js Session Configuration
+            const session = enigma.create({
+                schema: enigma.schemas['12.612.0'], // Replace with your Qlik Sense version's schema
+                url: `ws://${qlikConfig.host}:${qlikConfig.port}${qlikConfig.prefix}app/${qlikConfig.appId}`,
+                createSocket: url => new WebSocket(url)
+            });
 
-    // 2. Get the app layout.
-    appData.layout = await app.getLayout();
+            async function getAppDetailsAsJson(appId) {
+                const appData = {};
 
-    // 3. Get the app's load script.
-    appData.loadScript = await app.getScript();
+                try {
+                    // 1. Establish a session and open the Qlik Sense app.
+                    const global = await session.open();
+                    const app = await global.openDoc(appId);
 
-    // 4. Get a list of dimensions and measures (optional).
-    appData.dimensions = await app.getDimensionList();
-    appData.measures = await app.getMeasureList();
+                    // 2. Get the app layout.
+                    appData.layout = await app.getLayout();
 
-    // 5. Get a list of sheets and master objects.
-    appData.sheets = [];
-    const sheets = await app.getObjects({ qType: 'sheet' }); // Get all sheets.
-    for (const sheet of sheets) {
-      const sheetInfo = {
-        id: sheet.qInfo.qId,
-        name: sheet.qMeta.title,
-        objects: [],
-      };
+                    // 3. Get the app's load script.
+                    appData.loadScript = await app.getScript();
 
-      // Get objects within each sheet (e.g., visualizations).
-      const sheetLayout = await app.getObject(sheet.qInfo.qId).getLayout();
-      for (const object of sheetLayout.qChildren) {
-        const objectInfo = {
-          id: object.qInfo.qId,
-          type: object.qInfo.qType,
-          properties: await app.getObject(object.qInfo.qId).getProperties(), // Get object properties.
-        };
+                    // 4. Get a list of dimensions and measures (optional).
+                    appData.dimensions = await app.getDimensionList();
+                    appData.measures = await app.getMeasureList();
 
-        // You can add more logic here to extract data from visualizations,
-        // using `exportData()` or other methods, depending on your needs.
-        // This is a complex step and requires handling various object types and data formats.
-        // Example for getting chart data (requires downloading a file):
-        // if (object.qInfo.qType === 'chart') {
-        //   const exportResult = await app.getObject(object.qInfo.qId).exportData('OOXML');
-        //   objectInfo.dataExportUrl = `http://localhost:4848${exportResult.qUrl}`;
-        // }
+                    // 5. Get a list of sheets and master objects.
+                    appData.sheets = [];
+                    const sheets = await app.getObjects({ qType: 'sheet' }); // Get all sheets.
+                    for (const sheet of sheets) {
+                        const sheetInfo = {
+                            id: sheet.qInfo.qId,
+                            name: sheet.qMeta.title,
+                            objects: [],
+                        };
 
-        sheetInfo.objects.push(objectInfo);
-      }
-      appData.sheets.push(sheetInfo);
-    }
+                        // Get objects within each sheet (e.g., visualizations).
+                        const sheetLayout = await app.getObject(sheet.qInfo.qId).getLayout();
+                        for (const object of sheetLayout.qChildren) {
+                            const objectInfo = {
+                                id: object.qInfo.qId,
+                                type: object.qInfo.qType,
+                                properties: await app.getObject(object.qInfo.qId).getProperties(), // Get object properties.
+                            };
 
-    // 6. Close the Qlik Sense app and session.
-    await app.close();
-    await session.close();
+                            sheetInfo.objects.push(objectInfo);
+                        }
+                        appData.sheets.push(sheetInfo);
+                    }
 
-  } catch (error) {
-    console.error('Error extracting app data:', error);
-  }
+                    // 6. Close the Qlik Sense app and session.
+                    await app.close();
+                    await session.close();
 
-  return appData;
-}
+                } catch (error) {
+                    console.error('Error extracting app data:', error);
+                    $('#json-output').text('Error fetching data. See console for details.');
+                    return null; // Indicate failure
+                }
 
-// Example Usage:
-const appId = 'your-app-id'; // Replace with the actual Qlik Sense app ID or name.
-getAppDetailsAsJson(appId)
-  .then(data => {
-    fs.writeFileSync('qliksense_app_data.json', JSON.stringify(data, null, 2)); // Save the data to a JSON file.
-    console.log('App data saved to qliksense_app_data.json');
-  })
-  .catch(error => console.error('Error:', error));
+                return appData;
+            }
+
+            // Call the function and display the data
+            getAppDetailsAsJson(appId)
+                .then(data => {
+                    if (data) {
+                        const jsonData = JSON.stringify(data, null, 2);
+                        $('#json-output').text(jsonData);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    $('#json-output').text('Error fetching data. See console for details.');
+                });
+        });
+    </script>
+</body>
+</html>
