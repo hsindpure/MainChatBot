@@ -2,9 +2,8 @@ define([
     "qlik",
     "jquery",
     "text!./template.html",
-    "css!./style.css",
-    'enigma'
-], function (qlik, $, template, css, enigma) {
+    "css!./style.css"
+], function (qlik, $, template) {
     'use strict';
 
     return {
@@ -43,97 +42,78 @@ define([
                 app.getInfo().then(function (appInfo) {
                     var appId = appInfo.qAppId;
 
-                    // Qlik Sense Engine configuration
-                    var config = {
-                        host: window.location.hostname,
-                        port: window.location.port,
-                        prefix: "/",
-                        isSecure: window.location.protocol === "https:",
-                        rejectUnauthorized: false, // Only for development
-                        url: "ws://" + window.location.hostname + ":" + window.location.port + "/app/" + appId
-                    };
+                    qlik.getGlobal().then(function(global) {
+                        global.openDoc(appId).then(function(app) {
+                            // Get all objects in the app
+                            app.getObjects().then(function(objects) {
+                                const appData = {
+                                    appId: appId,
+                                    objects: []
+                                };
 
-                    // Connect to the Qlik Sense Engine
-                    enigma.getService(config).then(function (service) {
-                        return service.open()
-                            .then(function (global) {
-                                return global.openDoc(appId);
-                            })
-                            .then(function (app) {
-                                // Get all objects in the app
-                                return app.getObjects()
-                                    .then(function (objects) {
-                                        const appData = {
-                                            appId: appId,
-                                            objects: []
-                                        };
+                                // Iterate over the objects
+                                const objectPromises = objects.map(function(object) {
+                                    return app.getObject(object.qId)
+                                        .then(function(obj) {
+                                            return obj.getProperties()
+                                                .then(function(properties) {
+                                                    const objectData = {
+                                                        id: object.qId,
+                                                        type: properties.qInfo.qType,
+                                                        properties: properties,
+                                                        data: null // Placeholder for data
+                                                    };
 
-                                        // Iterate over the objects
-                                        const objectPromises = objects.map(function (object) {
-                                            return app.getObject(object.qId)
-                                                .then(function (obj) {
-                                                    return obj.getProperties()
-                                                        .then(function (properties) {
-                                                            const objectData = {
-                                                                id: object.qId,
-                                                                type: properties.qInfo.qType,
-                                                                properties: properties,
-                                                                data: null // Placeholder for data
-                                                            };
-
-                                                            // Get data for list objects
-                                                            if (properties.qInfo.qType === 'listbox') {
-                                                                const listObjectDef = {
-                                                                    qDef: {
-                                                                        qFieldDefs: [properties.qListObjectDef.qFieldDefs[0]]
-                                                                    },
-                                                                    qInitialDataFetch: [{
-                                                                        qTop: 0,
-                                                                        qLeft: 0,
-                                                                        qHeight: 100, // Adjust as needed
-                                                                        qWidth: 1
-                                                                    }]
-                                                                };
-                                                                return obj.getListObjectData('qListObject', [listObjectDef])
-                                                                    .then(function (listObjectData) {
-                                                                        objectData.data = listObjectData[0].qMatrix;
-                                                                        return objectData;
-                                                                    });
-                                                            }
-                                                            // Get data for hypercube objects (charts)
-                                                            else if (properties.qInfo.qType === 'visualization') {
-                                                                const hypercubeDef = properties.qHyperCubeDef;
-                                                                hypercubeDef.qInitialDataFetch = [{
-                                                                    qTop: 0,
-                                                                    qLeft: 0,
-                                                                    qHeight: 100, // Adjust as needed
-                                                                    qWidth: 10 // Adjust as needed
-                                                                }];
-                                                                return obj.getHyperCubeData('/qHyperCubeDef', [hypercubeDef.qInitialDataFetch[0]])
-                                                                    .then(function (hypercubeData) {
-                                                                        objectData.data = hypercubeData[0].qMatrix;
-                                                                        return objectData;
-                                                                    });
-                                                            }
-                                                            else {
+                                                    // Get data for list objects
+                                                    if (properties.qInfo.qType === 'listbox') {
+                                                        const listObjectDef = {
+                                                            qDef: {
+                                                                qFieldDefs: [properties.qListObjectDef.qFieldDefs[0]]
+                                                            },
+                                                            qInitialDataFetch: [{
+                                                                qTop: 0,
+                                                                qLeft: 0,
+                                                                qHeight: 100, // Adjust as needed
+                                                                qWidth: 1
+                                                            }]
+                                                        };
+                                                        return obj.getListObjectData('qListObject', [listObjectDef])
+                                                            .then(function (listObjectData) {
+                                                                objectData.data = listObjectData[0].qMatrix;
                                                                 return objectData;
-                                                            }
-                                                        });
+                                                            });
+                                                    }
+                                                    // Get data for hypercube objects (charts)
+                                                    else if (properties.qInfo.qType === 'visualization') {
+                                                        const hypercubeDef = properties.qHyperCubeDef;
+                                                        hypercubeDef.qInitialDataFetch = [{
+                                                            qTop: 0,
+                                                            qLeft: 0,
+                                                            qHeight: 100, // Adjust as needed
+                                                            qWidth: 10 // Adjust as needed
+                                                        }];
+                                                        return obj.getHyperCubeData('/qHyperCubeDef', [hypercubeDef.qInitialDataFetch[0]])
+                                                            .then(function (hypercubeData) {
+                                                                objectData.data = hypercubeData[0].qMatrix;
+                                                                return objectData;
+                                                            });
+                                                    }
+                                                    else {
+                                                        return objectData;
+                                                    }
                                                 });
                                         });
+                                });
 
-                                        return Promise.all(objectPromises)
-                                            .then(function (objectData) {
-                                                appData.objects = objectData;
-                                                console.log("App Data:", JSON.stringify(appData, null, 2)); // Log the JSON
-                                                $element.html("<pre>" + JSON.stringify(appData, null, 2) + "</pre>"); // Display the JSON
-                                                return appData;
-                                            });
+                                return Promise.all(objectPromises)
+                                    .then(function (objectData) {
+                                        appData.objects = objectData;
+                                        console.log("App Data:", JSON.stringify(appData, null, 2)); // Log the JSON
+                                        $element.html("<pre>" + JSON.stringify(appData, null, 2) + "</pre>"); // Display the JSON
+                                        return appData;
                                     });
                             });
-                    }).catch(function (error) {
-                        console.error("Error connecting to Qlik Sense Engine:", error);
-                        $element.html("Error: " + error.message);
+                        });
                     });
                 });
             }
@@ -154,25 +134,3 @@ define([
         }
     };
 });
-
-.log-app-data-container {
-    padding: 10px;
-}
-
-.qui-button {
-    background-color: #4CAF50; /* Green */
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-.qui-button:hover {
-    background-color: #3e8e41;
-}
