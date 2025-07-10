@@ -1,817 +1,110 @@
-
-
-            // Load XLSX using dynamic import
-            import('https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs')
-                .then(XLSX => {
-                    // XLSX is now available here
-                    console.log("XLSX (ES Module):", XLSX);
-
-                    // Example usage (replace with your actual data and logic)
-                    const data = [
-                        { "Name": "Alice", "Age": 30 },
-                        { "Name": "Bob", "Age": 25 }
-                    ];
-                    const worksheet = XLSX.utils.json_to_sheet(data);
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-                    const excelData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-                    const blob = new Blob([new Uint8Array(excelData)], { type: 'application/octet-stream' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'data.xlsx';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-
-                })
-                .catch(error => {
-                    console.error("Error loading XLSX (ES Module):", error);
-                });
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
-
-/* QlikSense AI Chatbot Extension Styles */
-.qlik-chatbot-extension {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 10000;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
-
-.download-chart-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background-color: #4CAF50;
-    color: white;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 10; /* Ensure it's above the chart */
-}
-
-.download-chart-button:hover {
-    background-color: #3e8e41;
-}
-#suggestionBox {
-bottom: 50px;
-    border: 1px solid #ccc;
-    max-height: 150px;
-    overflow-y: auto;
-    position: absolute;
-    border-radius: 15px;
-    background: #fff;
-	font-size:12px;
-    display: none;
-    z-index: 999;
-}
-.suggestion-item {
-  padding: 8px;
-  cursor: pointer;
-}
-.suggestion-item:hover {
-  background-color: #eee;
-}
-
-
-
-                    .chart-controls {
-    display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    margin-top: 10px;
-}
-.chart-container{
-padding:2%;
-}
-.chart-controls button {
-    background-color: #4CAF50; /* Green */
-    border: none;
-    color: white;
-    padding: 5px 10px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 12px;
-    margin-left: 5px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.chart-controls button:hover {
-    opacity: 0.8;
-}
-/* Response speak and copy buttons */
-.copy-response {
-}
-
-.hear-responce {
-    position: absolute;
-    right: 15%;
-    top: 5px;
-    border: navajowhite;
-    padding: 5px;
-    padding-bottom: 0;
-    cursor: pointer;
-    opacity: 1;
-}
-
-.hear-responce {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    width: 100%;
-}
-
-.hear-responce button {
-    width: 25px;
-    background-color: #f2f2f2;
-    color: #ccc;
-    border: 1px solid #d4d4d5;
-    padding: 5px;
-    display: flex;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    border-radius: 2px;
-    font-size: 11px;
-    margin-right: 6px;
-}
-
-.user.hear-responce button {
-    width: 25px;
-    background-color: transparent;
-    color: #485aac;
-    border: navajowhite;
-    padding: 5px 0px;
-    display: flex;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    border-radius: 2px;
-}
-
-.bot-message .hear-responce button {
-    width: 25px;
-    background-color: #d9fffc;
-    color: #76d3cc;
-    border: 1px solid #76d3cc;
-}
-
-.bot-message .hear-responce button {
-    background-color: transparent;
-    color: #d9d9d9;
-    border: none;
-}
-
-.hear-responce .speak-button {
-    margin-right: 1px;
-}
-
-.hear-responce button:last-child {
-}
-
-.hear-responce button.speack-active {
-    opacity: 0.9;
-    background: #ab2f2f;
-}
-
-.hear-responce button:hover {
-    background: #ccc;
-    color: #fff;
-}
-
-.user.hear-responce button:hover {
-    background: #667eea;
-    color: #fff;
-}
-
-/* Chatbot Toggle Button */
-.chatbot-toggle {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: white;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.chatbot-toggle:hover {
-    transform: scale(1.1);
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
-}
-
-.chatbot-icon {
-    transition: transform 0.3s ease;
-}
-
-.chatbot-toggle:hover .chatbot-icon {
-    transform: rotate(15deg);
-}
-
-/* Pulse Animation */
-.pulse-ring {
-    position: absolute;
-    width: 60px;
-    height: 60px;
-    border: 3px solid rgba(102, 126, 234, 0.4);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1.8);
-        opacity: 0;
-    }
-}
-
-/* Chatbot Container */
-.chatbot-container {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    width: 550px;
-    height: 600px;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    transform: translateY(20px) scale(0.95);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.chatbot-container.active {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Header */
-.chatbot-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 16px 20px;
-    border-radius: 20px 20px 0 0;
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.app-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.app-icon {
-    font-size: 20px;
-}
-
-.app-name {
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.role-select {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    outline: none;
-}
-
-.role-select option {
-    background: #667eea;
-    color: white;
-}
-
-.download-history,
-.chatbot-close {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    padding: 6px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.download-history:hover,
-.chatbot-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* Body */
-.chatbot-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: #f8fafc;
-}
-
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-}
-
-/* Messages */
-.message {
-    margin-bottom: 20px;
-    animation: messageSlide 0.3s ease-out;
-}
-
-@keyframes messageSlide {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.message-content {
-    position: relative;
-    max-width: 85%;
-}
-
-.user-message .message-content {
-    margin-left: auto;
-    background: #667eea;
-    color: white;
-    border-radius: 18px 18px 6px 18px;
-    padding: 12px 16px;
-}
-
-.bot-message .message-text {
-    line-height: 1.5;
-    word-wrap: break-word;
-    padding: 1% 5%;
-    background: #f7fafc;
-}
-
-.bot-message .message-content {
-    background: white;
-    color: #2d3748;
-    border-radius: 18px 18px 18px 6px;
-    padding: 12px 16px;
-    border: 1px solid #e2e8f0;
-}
-
-.message-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-    font-size: 12px;
-    opacity: 0.8;
-}
-
-.user-icon,
-.bot-icon {
-    font-size: 14px;
-}
-
-.user-name,
-.bot-name {
-    font-weight: 500;
-}
-
-.timestamp {
-    margin-left: auto;
-    font-size: 11px;
-}
-
-.message-text {
-    line-height: 1.5;
-    word-wrap: break-word;
-}
-
-/* Chart-specific styles */
-.chart-message .message-content {
-    max-width: 95%;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 16px;
-}
-
-.chart-description {
-    font-size: 14px;
-    color: #4a5568;
-    margin-bottom: 12px;
-    padding: 8px 12px;
-    background: #f7fafc;
-    border-radius: 6px;
-    border-left: 4px solid #667eea;
-}
-
-.chart-container {
-    width: 100%;
-    min-height: 300px;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-}
-
-.chart-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 300px;
-    color: #a0aec0;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 12px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.chart-error {
-    padding: 20px;
-    text-align: center;
-    color: #e53e3e;
-    background: #fed7d7;
-    border-radius: 6px;
-    margin: 10px 0;
-}
-
-/* Typing Indicator */
-.typing-indicator .message-content {
-    background: white;
-    border: 1px solid #e2e8f0;
-    padding: 16px;
-    width: fit-content;
-}
-
-.typing-animation {
-    display: flex;
-    gap: 4px;
-}
-
-.typing-animation span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #cbd5e0;
-    animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-animation span:nth-child(1) { animation-delay: -0.32s; }
-.typing-animation span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes typing {
-    0%, 80%, 100% {
-        transform: scale(0);
-        opacity: 0.5;
-    }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-/* Quick Actions */
-.quick-actions {
-    padding: 12px 20px;
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.quick-action {
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    color: #4a5568;
-    padding: 6px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.quick-action:hover {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-/* Footer */
-.chatbot-footer {
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    padding: 16px;
-}
-
-.input-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-	position:relative;
-    border-radius: 24px;
-    padding: 8px 12px;
-    transition: border-color 0.2s ease;
-}
-
-.input-container:focus-within {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.chat-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    outline: none;
-    padding: 8px 0;
-    font-size: 14px;
-    color: #2d3748;
-}
-
-.chat-input::placeholder {
-    color: #a0aec0;
-}
-
-.voice-button,
-.send-button {
-    background: #667eea;
-    border: none;
-    color: white;
-    padding: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.voice-button:hover,
-.send-button:hover {
-    background: #5a67d8;
-    transform: scale(1.05);
-}
-
-.voice-button.listening {
-    background: #e53e3e;
-    animation: pulse-voice 1s infinite;
-}
-
-@keyframes pulse-voice {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-.footer-info {
-    text-align: center;
-    margin-top: 8px;
-}
-
-.powered-by {
-    font-size: 11px;
-    color: #a0aec0;
-}
-
-/* Data Tables and Visualizations */
-.ai-table {
-    margin: 12px 0;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-
-.data-table th {
-    background: #667eea;
-    color: white;
-    padding: 8px 12px;
-    text-align: left;
-    font-weight: 500;
-}
-
-.data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #e2e8f0;
-    background: white;
-}
-
-.data-table tr:hover td {
-    background: #f7fafc;
-}
-
-/* Responsive Design */
-@media (max-width: 600px) {
-    .qlik-chatbot-extension {
-        bottom: 10px;
-        right: 10px;
-        left: 10px;
-    }
-    
-    .chatbot-container {
-        width: 100%;
-        height: 500px;
-        right: 0;
-        left: 0;
-    }
-    
-    .chart-container {
-        min-height: 250px;
-    }
-    
-    .quick-actions {
-        padding: 8px 12px;
-    }
-    
-    .quick-action {
-        font-size: 10px;
-        padding: 4px 8px;
-    }
-}
-
-@media (max-width: 400px) {
-    .chatbot-container {
-        height: 450px;
-    }
-    
-    .chart-container {
-        min-height: 200px;
-    }
-}
-
-/* Highcharts specific styling */
-.highcharts-container {
-    font-family: inherit !important;
-}
-
-.highcharts-title {
-    font-size: 16px !important;
-    font-weight: 600 !important;
-}
-
-.highcharts-subtitle {
-    font-size: 12px !important;
-}
-
-.highcharts-credits {
-    display: none !important;
-}
-
-/* Custom scrollbar for webkit browsers */
-.chat-messages::-webkit-scrollbar {
-    width: 8px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
-}
-
-/* System message styles */
-.system-message .message-content {
-    background: #edf2f7;
-    color: #4a5568;
-    border: 1px solid #e2e8f0;
-    padding: 8px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    text-align: center;
-    max-width: 70%;
-    margin: 0 auto;
-}
-
-/* Animation for new messages */
-.message.new {
-    animation: fadeInUp 0.3s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Chart interaction styles */
-.chart-container:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Loading state improvements */
-.chart-loading span {
-    font-size: 14px;
-    color: #4a5568;
-}
-
-/* Error state improvements */
-.chart-error {
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-/* Accessibility improvements */
-.quick-action:focus,
-.voice-button:focus,
-.send-button:focus,
-.chatbot-toggle:focus {
-    outline: 2px solid #667eea;
-    outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .chatbot-container {
-        border: 2px solid #000;
-    }
-    
-    .message-content {
-        border: 1px solid #000;
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    .chatbot-toggle,
-    .pulse-ring,
-    .message,
-    .loading-spinner {
-        animation: none;
-    }
-    
-    .chatbot-container {
-        transition: none;
-    }
-}
+define([
+    'jquery',
+    'qlik',
+    './properties',
+    'text!./template.html',
+    'text!./style.css',
+    'enigma' // Assuming you've included Enigma.js
+], function($, qlik, props, template, cssContent, enigma) {
+    'use strict';
+
+    return {
+        definition: props,
+        template: template,
+        paint: function($element, layout) {
+            const appId = layout.props.appId; // Assuming you have an appId property
+
+            // Qlik Sense Engine configuration
+            const config = {
+                host: layout.props.host, // Assuming you have a host property
+                port: layout.props.port, // Assuming you have a port property
+                isSecure: layout.props.isSecure, // Assuming you have an isSecure property
+                prefix: layout.props.prefix, // Assuming you have a prefix property
+                appId: appId
+            };
+
+            // Connect to the Qlik Sense Engine
+            enigma.getService(config).then(function(service) {
+                return service.open()
+                    .then(function(global) {
+                        return global.openDoc(appId);
+                    })
+                    .then(function(app) {
+                        // Get all objects in the app
+                        return app.getObjects()
+                            .then(function(objects) {
+                                const appData = {
+                                    appId: appId,
+                                    objects: []
+                                };
+
+                                // Iterate over the objects
+                                const objectPromises = objects.map(function(object) {
+                                    return app.getObject(object.qId)
+                                        .then(function(obj) {
+                                            return obj.getProperties()
+                                                .then(function(properties) {
+                                                    const objectData = {
+                                                        id: object.qId,
+                                                        type: properties.qInfo.qType,
+                                                        properties: properties,
+                                                        data: null // Placeholder for data
+                                                    };
+
+                                                    // Get data for list objects
+                                                    if (properties.qInfo.qType === 'listbox') {
+                                                        const listObjectDef = {
+                                                            qDef: {
+                                                                qFieldDefs: [properties.qListObjectDef.qFieldDefs[0]]
+                                                            },
+                                                            qInitialDataFetch: [{
+                                                                qTop: 0,
+                                                                qLeft: 0,
+                                                                qHeight: 100, // Adjust as needed
+                                                                qWidth: 1
+                                                            }]
+                                                        };
+                                                        return obj.getListObjectData('qListObject', [listObjectDef])
+                                                            .then(function(listObjectData) {
+                                                                objectData.data = listObjectData[0].qMatrix;
+                                                                return objectData;
+                                                            });
+                                                    }
+                                                    // Get data for hypercube objects (charts)
+                                                    else if (properties.qInfo.qType === 'visualization') {
+                                                        const hypercubeDef = properties.qHyperCubeDef;
+                                                        hypercubeDef.qInitialDataFetch = [{
+                                                            qTop: 0,
+                                                            qLeft: 0,
+                                                            qHeight: 100, // Adjust as needed
+                                                            qWidth: 10 // Adjust as needed
+                                                        }];
+                                                        return obj.getHyperCubeData('/qHyperCubeDef', [hypercubeDef.qInitialDataFetch[0]])
+                                                            .then(function(hypercubeData) {
+                                                                objectData.data = hypercubeData[0].qMatrix;
+                                                                return objectData;
+                                                            });
+                                                    }
+                                                    else {
+                                                        return objectData;
+                                                    }
+                                                });
+                                        });
+                                });
+
+                                return Promise.all(objectPromises)
+                                    .then(function(objectData) {
+                                        appData.objects = objectData;
+                                        console.log("App Data:", JSON.stringify(appData, null, 2)); // Log the JSON
+                                        return appData;
+                                    });
+                            });
+                    });
+            }).catch(function(error) {
+                console.error("Error connecting to Qlik Sense Engine:", error);
+            });
+
+            return qlik.Promise.resolve();
+        }
+    };
+});
