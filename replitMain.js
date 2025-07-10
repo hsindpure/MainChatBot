@@ -4,15 +4,17 @@ define([
     './properties',
     'text!./template.html',
     'text!./style.css',
-	 'text!./data.json', 
+    'text!./data.json',
     'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js', // ECharts CDN
-], function($, qlik, props, template, cssContent,jsonData, echarts) {
+    'https://cdn.sheetjs.com/xlsx/v0.18.12/xlsx.full.min.js', // XLSX Library
+], function($, qlik, props, template, cssContent, jsonData, echarts, XLSX) {
     'use strict';
 
     // Add CSS to document head
     $('<style>').html(cssContent).appendTo('head');
- var dataObj = JSON.parse(jsonData);
- console.log(dataObj);
+    var dataObj = JSON.parse(jsonData);
+    console.log(dataObj);
+
     return {
         template: template,
         definition: props,
@@ -30,13 +32,13 @@ define([
             let currentChartContainerId = null; // Track the current chart container ID
             let lastChartConfig = null; // Store the last chart configuration
             let previousChartConfig = null; // Store the previous chart configuration for "Go Back"
-			let chartcontainerheader=null;
-			
+            let chartcontainerheader = null;
+
             let sursa = [];
             let allObjData = [];
 
             // Chart-related keywords for detection
-            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot','bar', 'line', 'pie', 'scatter', 'stacked bar', 'area', 'boxplot', 'radar', 'geo', 'tree', 'treemap', 'sankey', 'funnel', 'gauge'];
+            const chartKeywords = ['chart', 'show chart', 'create chart', 'visualization', 'graph', 'plot', 'diagram', 'visual', 'trend', 'bar chart', 'line chart', 'pie chart', 'scatter plot', 'bar', 'line', 'pie', 'scatter', 'stacked bar', 'area', 'boxplot', 'radar', 'geo', 'tree', 'treemap', 'sankey', 'funnel', 'gauge'];
 
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window) {
@@ -177,18 +179,18 @@ define([
                 }
                 return jsonDataArray;
             };
-			
-			
-						myArrayObjects.forEach(function(objectID) {
-							fetchDataAndProcess(objectID).then(jsonDataArray => {
-								//console.log(jsonDataArray);
-								allObjData.push(jsonDataArray);
-								sursa = JSON.stringify(allObjData);
-							   console.log("all Objects Data in string", sursa);
-							}).catch(error => {
-								console.error("Error fetching data:", error);
-							});
-						});
+
+
+            myArrayObjects.forEach(function(objectID) {
+                fetchDataAndProcess(objectID).then(jsonDataArray => {
+                    //console.log(jsonDataArray);
+                    allObjData.push(jsonDataArray);
+                    sursa = JSON.stringify(allObjData);
+                    console.log("all Objects Data in string", sursa);
+                }).catch(error => {
+                    console.error("Error fetching data:", error);
+                });
+            });
 
 
             function initializeChatbot() {
@@ -264,11 +266,9 @@ define([
 
                 console.log(query);
 
-            const decryptedKey = "key";
+                const decryptedKey = "key";
 
                 const baseUrl = "url";
-
-
 
                 let model;
                 let context = '4o';
@@ -338,82 +338,90 @@ define([
                         },
                         "chartType": "bar || line || pie || scatter || stacked bar || area || boxplot || radar || geo || tree || treemap || sankey || funnel || gauge"
                     }
-					
-					for Geo map use following format :
-					
-						
-						
-						  option = {
-										title: {
-										
-										  
-										  left: 'right'
-										},
-										tooltip: {
-										  trigger: 'item',
-										  showDelay: 0,
-										  transitionDuration: 0.2
-										},
-										visualMap: {
-										  left: 'right',
-										  min: 500000,
-										  max: 38000000,
-										  inRange: {
-											color: [
-											  '#313695',
-											  '#4575b4',
-											  '#74add1',
-											  '#abd9e9',
-											  '#e0f3f8',
-											  '#ffffbf',
-											  '#fee090',
-											  '#fdae61',
-											  '#f46d43',
-											  '#d73027',
-											  '#a50026'
-											]
-										  },
-										  text: ['High', 'Low'],
-										  calculable: true
-										},
-										toolbox: {
-										  show: true,
-										  //orient: 'vertical',
-										  left: 'left',
-										  top: 'top',
-										  feature: {
-											dataView: { readOnly: false },
-											restore: {},
-											saveAsImage: {}
-										  }
-										},
-										series: [
-										  {
-											name: 'Country Data ',
-											type: 'map',
-											roam: true,
-											map: 'USA',
-											emphasis: {
-											  label: {
-												show: true
-											  }
-											},
-											data: [
-											  { name: 'Alabama', value: 4822023 },
-											
-										
-											]
-										  }
-										]
-									  }
-					`;
+
+                    for Geo map use following format :
+
+
+                      option = {
+                            title: {
+
+
+                              left: 'right'
+                            },
+                            tooltip: {
+                              trigger: 'item',
+                              showDelay: 0,
+                              transitionDuration: 0.2
+                            },
+                            visualMap: {
+                              left: 'right',
+                              min: 500000,
+                              max: 38000000,
+                              inRange: {
+                                color: [
+                                  '#313695',
+                                  '#4575b4',
+                                  '#74add1',
+                                  '#abd9e9',
+                                  '#e0f3f8',
+                                  '#ffffbf',
+                                  '#fee090',
+                                  '#fdae61',
+                                  '#f46d43',
+                                  '#d73027',
+                                  '#a50026'
+                                ]
+                              },
+                              text: ['High', 'Low'],
+                              calculable: true
+                            },
+                            toolbox: {
+                              show: true,
+                              //orient: 'vertical',
+                              left: 'left',
+                              top: 'top',
+                              feature: {
+                                dataView: { readOnly: false },
+                                restore: {},
+                                saveAsImage: {}
+                              }
+                            },
+                            series: [
+                              {
+                                name: 'Country Data ',
+                                type: 'map',
+                                roam: true,
+                                map: 'USA',
+                                emphasis: {
+                                  label: {
+                                    show: true
+                                  }
+                                },
+                                data: [
+                                  { name: 'Alabama', value: 4822023 },
+
+
+                                ]
+                              }
+                            ]
+                          }
+                    `;
                 }
-				
-				
+
                 try {
-				
-		
-            console.log("all Objects Data ", sursa);
+
+                    console.log("all Objects Data ", sursa);
+
+                    // **Excel Export Logic**
+                    if (query.toLowerCase().startsWith("@create excel")) {
+                        const excelQuery = query.substring("@create excel".length).trim(); // Extract the query after the command
+                        const excelData = await getExcelData(excelQuery); // Function to fetch data for Excel
+                        exportToExcel(excelData, excelQuery); // Generate and download Excel
+                        hideTypingIndicator();
+                        addMessage('bot', 'Generating Excel file...');
+                        return; // Stop further processing
+                    }
+
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
@@ -465,6 +473,56 @@ define([
                 }
             }
 
+            // **Function to Fetch Data for Excel**
+            async function getExcelData(query) {
+                // Implement logic to fetch data based on the query
+                // This could involve filtering hypercubeData or allObjData based on the query
+                // For example:
+                const filteredData = allObjData.flat().filter(item => {
+                    // Implement your filtering logic here based on the query
+                    // This is a placeholder - replace with your actual filtering
+                    return Object.values(item).some(value => String(value).toLowerCase().includes(query.toLowerCase()));
+                });
+                return filteredData;
+            }
+
+            // **Function to Generate and Download Excel**
+            function exportToExcel(data, query) {
+                if (!data || data.length === 0) {
+                    alert('No data found for the Excel export.');
+                    return;
+                }
+
+                // Create a new workbook
+                const wb = XLSX.utils.book_new();
+
+                // Convert data to worksheet format
+                const ws = XLSX.utils.json_to_sheet(data);
+
+                // Add the worksheet to the workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Data');
+
+                // Generate Excel file
+                const excelBuffer = XLSX.write(wb, {
+                    bookType: 'xlsx',
+                    type: 'array'
+                });
+                const excelData = new Uint8Array(excelBuffer);
+
+                // Create a Blob and trigger download
+                const blob = new Blob([excelData], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `excel_export_${query.replace(/\s+/g, '_')}.xlsx`; // Filename
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
             function addMessage(sender, message, chartConfig = null, chartType = null) {
                 const $messages = $element.find('.chat-messages');
                 const timestamp = new Date().toLocaleTimeString();
@@ -480,9 +538,9 @@ define([
                     name = 'System';
                 }
 
-                
-				message = message.replace(/```html/g, '').replace(/```/g, '').trim();
-				
+
+                message = message.replace(/```html/g, '').replace(/```/g, '').trim();
+
                 let messageHtml = `
                     <div class="message ${messageClass}" id="${messageId}">
                         <div class="message-content">
@@ -492,7 +550,7 @@ define([
                                 <span class="timestamp">${timestamp}</span>
                             </div>
                             <div class="message-text">${message}</div>
-                            ${chartConfig ? `<div class="chart-container" id="chart_${messageId}"></div>` : ''}
+                            ${chartConfig ? '<div class="chart-container" id="chart_' + messageId + '"></div>' : ''}
                             <div class="hear-responce ${sender}" id="chartheading_${messageId}">
                                 <button class="speak-button" >
                                     <i class="fas fa-volume-up"></i>
@@ -504,7 +562,7 @@ define([
                         </div>
                     </div>
                 `;
-				
+
 
                 $messages.append(messageHtml);
                 $messages.scrollTop($messages[0].scrollHeight);
@@ -512,10 +570,10 @@ define([
                 // Generate chart if chartConfig is provided
                 if (chartConfig) {
                     currentChartContainerId = `chart_${messageId}`; // Store the container ID
-					
-				chartcontainerheader = `chartheading_${messageId}`;
+
+                    chartcontainerheader = `chartheading_${messageId}`;
                     setTimeout(() => {
-                        generateChart(currentChartContainerId, chartcontainerheader,chartConfig, chartType);
+                        generateChart(currentChartContainerId, chartcontainerheader, chartConfig, chartType);
                     }, 100);
                 }
 
@@ -528,12 +586,10 @@ define([
                 });
             }
 
-            function generateChart(containerId,chartcontainerheader, chartConfig, chartType) {
-			
-		
-				
+            function generateChart(containerId, chartcontainerheader, chartConfig, chartType) {
+
                 const container = document.getElementById(containerId);
-				  const containerheader = document.getElementById(chartcontainerheader);
+                const containerheader = document.getElementById(chartcontainerheader);
                 if (!container) {
                     console.error('Chart container not found:', containerId);
                     return;
@@ -541,66 +597,65 @@ define([
 
                 // Clear previous content
                 $(container).empty();
-				
-					 const $buttonsHtml = $(`
-                    
+
+                const $buttonsHtml = $(`
+
                         <button class="go-back-button"><i class="fas fa-arrow-left"></i></button>
-                    
+
                 `);
 
                 // Add "Go Back" and "Export to Excel" buttons using jQuery
-               
+
 
                 // Initialize chart
-					if(chartConfig.series[0].type == 'map'){
-					 echarts.registerMap('USA', dataObj);
-					 }
+                if (chartConfig.series[0].type == 'map') {
+                    echarts.registerMap('USA', dataObj);
+                }
                 const myChart = echarts.init(container);
-				
-			
-			
+
+
                 // Add tooltip for hover effect
                 chartConfig.tooltip = {
                     trigger: 'item'
-                  //  formatter: '{a} <br/>{b} : {c} ({d}%)' // Customize as needed
+                    //  formatter: '{a} <br/>{b} : {c} ({d}%)' // Customize as needed
                 };
 
                 // Set chart options
                 myChart.setOption(chartConfig);
-				
+
                 // Add click event listener for drilldown
                 myChart.on('click', function(params) {
-				
-                $(containerheader).append($buttonsHtml);
-				
+
+                    $(containerheader).append($buttonsHtml);
+
                     // Store the current chart config as the previous config
                     previousChartConfig = JSON.parse(JSON.stringify(chartConfig));
 
                     // Handle drilldown logic here - Modify chart directly
                     if (lastChartConfig && lastChartConfig.series) {
                         // Example: Filter data based on the clicked data point
-						
-						
-					const newData = lastChartConfig.series.map((series, i) => {
-					  if (series.type == 'line') {
-						return {
-						  ...series,
-						  data: series.data.filter(item => item == params.value) // Example filter
-						};
-					  }else  if (series.type == 'scatter') {
-						return {
-						  ...series,
-						  data: series.data.filter(item => item.value[1] == params.value[1]) // Example filter
-						};
-					  } else {
-						return {
-						  ...series,
-						  data: series.data.filter(item => item.value == params.value) // Example filter
-						};
-					  }
-					});
-						
-						//const newData = lastChartConfig.series.data.filter(item => item === params.value); 
+
+
+                        const newData = lastChartConfig.series.map((series, i) => {
+                            if (series.type == 'line') {
+                                return {
+                                    ...series,
+                                    data: series.data.filter(item => item == params.value) // Example filter
+                                };
+                            } else if (series.type == 'scatter') {
+                                return {
+                                    ...series,
+                                    data: series.data.filter(item => item.value[1] == params.value[1]) // Example filter
+                                };
+                            } else {
+                                return {
+                                    ...series,
+                                    data: series.data.filter(item => item.value == params.value) // Example filter
+                                };
+                            }
+                        });
+
+                        //const newData = lastChartConfig.series.data.filter(item => item === params.value);
 
                         // Update the chart options with the filtered data
                         const newChartConfig = {
@@ -614,28 +669,27 @@ define([
                 });
 
                 // "Go Back" button functionality using jQuery
-				let headerID = "#"+chartcontainerheader ;
-				
-				$(document).on("click",`${headerID} .go-back-button`, function(){
-				console.log("back button clicked");
-               // $(container).find('.go-back-button').on('click', function() {
+                let headerID = "#" + chartcontainerheader;
+
+                $(document).on("click", `${headerID} .go-back-button`, function() {
+                    console.log("back button clicked");
+                    // $(container).find('.go-back-button').on('click', function() {
                     if (previousChartConfig) {
-					
+
                         myChart.setOption(previousChartConfig);
-						
-						if(previousChartConfig.series[0].type == 'bar'){
-						const resizeObserver = new ResizeObserver(() => {
-							myChart.resize();
-						});
-						}
+
+                        if (previousChartConfig.series[0].type == 'bar') {
+                            const resizeObserver = new ResizeObserver(() => {
+                                myChart.resize();
+                            });
+                        }
                         chartConfig = previousChartConfig; // Restore the chartConfig
                         previousChartConfig = null; // Clear the previous config
                     }
-					$(this).remove();
+                    $(this).remove();
                 });
 
                 // "Export to Excel" button functionality using jQuery
-				
 
                 // Save chart instance
                 chartInstances[containerId] = myChart;
@@ -645,6 +699,39 @@ define([
                     myChart.resize();
                 });
                 resizeObserver.observe(container);
+
+                // **Add Download Chart Button**
+                const $downloadButton = $('<button>')
+                    .addClass('download-chart-button')
+                    .html('<i class="fas fa-download"></i> Download Chart')
+                    .on('click', function() {
+                        downloadChartImage(containerId);
+                    });
+                $(container).append($downloadButton);
+            }
+
+            // **Function to Download Chart as Image**
+            function downloadChartImage(containerId) {
+                const container = document.getElementById(containerId);
+                const chart = chartInstances[containerId];
+
+                if (!chart) {
+                    console.error('Chart instance not found:', containerId);
+                    return;
+                }
+
+                const imgData = chart.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2, // Adjust for higher resolution
+                    backgroundColor: '#fff' // Set background color
+                });
+
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = 'chart.png'; // Filename
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
 
             function showTypingIndicator() {
@@ -710,17 +797,19 @@ define([
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
                 linkElement.click();
-				
-				
-				*/
-				
-				
-                const pdfContent = chatHistory.map(msg => 
+
+
+                */
+
+
+                const pdfContent = chatHistory.map(msg =>
                     `[${msg.timestamp}] ${msg.user}: ${msg.message}`
                 ).join('\n\n');
 
                 // Create and download file
-                const blob = new Blob([pdfContent], { type: 'text/plain' });
+                const blob = new Blob([pdfContent], {
+                    type: 'text/plain'
+                });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -733,24 +822,23 @@ define([
 
 
 
-			            //response voice start code
-            $(document).ready(function () {
+            //response voice start code
+            $(document).ready(function() {
                 let isSpeaking = false;
                 let speechSynthesis = window.speechSynthesis;
                 let utterance;
                 speechSynthesis.cancel();
-                $(document).on('click','.speak-button', function () {
-				var text = $(this).parent().prev().text().trim();
+                $(document).on('click', '.speak-button', function() {
+                    var text = $(this).parent().prev().text().trim();
                     if (isSpeaking) {
                         stopSpeech(this);
                     } else {
-                        startSpeech(text,this);
+                        startSpeech(text, this);
                     }
                 });
 
-                function startSpeech(text,$this) {
+                function startSpeech(text, $this) {
                     // Get the text from the textarea
-                    
 
 
                     // Check if the browser supports speech synthesis
@@ -761,7 +849,7 @@ define([
 
                         // Optionally set properties like voice, pitch, and rate
                         utterance.pitch = 1; // Range: 0 to 2
-                        utterance.rate = 1;  // Range: 0.1 to 10
+                        utterance.rate = 1; // Range: 0.1 to 10
                         utterance.volume = 1; // Range: 0 to 1
 
                         // Speak the text
@@ -771,7 +859,7 @@ define([
                         $($this).addClass("active-speech");
 
 
-                        utterance.onend = function () {
+                        utterance.onend = function() {
                             isSpeaking = false;
                             $($this).html('<i class="fa fa-volume-up" aria-hidden="true"></i>');
                             $($this).removeClass("active-speech");
@@ -786,18 +874,18 @@ define([
                     if (isSpeaking) {
                         speechSynthesis.cancel();
                         isSpeaking = false;
-						    $($this).html('<i class="fa fa-volume-up" aria-hidden="true"></i>');
-                            $($this).removeClass("active-speech");
-                      
+                        $($this).html('<i class="fa fa-volume-up" aria-hidden="true"></i>');
+                        $($this).removeClass("active-speech");
+
                     }
                 }
-                $(window).on('beforeunload', function () {
+                $(window).on('beforeunload', function() {
                     stopSpeech();
                 });
             });
-			
 
-              $(document).on("click", ".copy-response", function () {
+
+            $(document).on("click", ".copy-response", function() {
                 // Get the parent div
                 const parentDiv = $(this).parent().prev();
 
@@ -816,84 +904,76 @@ define([
                 // Optional: Alert the user that the text has been copied
                 //console.log('Text copied to clipboard!');
             });
-			
-			
-			
-			
-$(document).ready(function() {
-  const keywords = [
-    "@generate the chart",
-    "@create excel"
-  ];
-
-  const $input = $('#commandInput');
-  const $suggestionBox = $('#suggestionBox');
-
-  $input.on('input', function() {
-    const val = $(this).val();
-    const lastChar = val.slice(-1);
-    // Show suggestions when last char is '@'
-    if (lastChar === '@') {
-      showSuggestions('');
-    } else if (val.includes('@')) {
-      // Get the part after '@' for filtering
-      const atIndex = val.lastIndexOf('@');
-      const query = val.slice(atIndex).toLowerCase();
-      showSuggestions(query);
-    } else {
-      $suggestionBox.hide();
-    }
-  });
-
-  function showSuggestions(query) {
-    const filtered = keywords.filter(k => k.toLowerCase().startsWith(query));
-    if (filtered.length === 0) {
-      $suggestionBox.hide();
-      return;
-    }
-    $suggestionBox.empty();
-    filtered.forEach(item => {
-      const $item = $('<div class="suggestion-item"></div>').text(item);
-      $item.on('click', function() {
-        selectSuggestion(item);
-      });
-      $suggestionBox.append($item);
-    });
-    // Position the suggestion box below input
-    const offset = $input.offset();
-    $suggestionBox.show();
-  }
-
-  function selectSuggestion(suggestion) {
-    const val = $input.val();
-    const atIndex = val.lastIndexOf('@');
-    const newVal = val.slice(0, atIndex) + suggestion + ' ';
-    $input.val(newVal);
-    $suggestionBox.hide();
-    $input.focus();
-  }
-});
 
 
-$('#commandInput').on('change', function() {
-  const command = $(this).val().trim();
-  if (command.startsWith("@generate the chart")) {
-    // Generate chart
-  } else if (command.startsWith("@create excel")) {
-    // Create Excel
-  }
-  // Add more commands as needed
-});
+
+
+            $(document).ready(function() {
+                const keywords = [
+                    "@generate the chart",
+                    "@create excel"
+                ];
+
+                const $input = $('#commandInput');
+                const $suggestionBox = $('#suggestionBox');
+
+                $input.on('input', function() {
+                    const val = $(this).val();
+                    const lastChar = val.slice(-1);
+                    // Show suggestions when last char is '@'
+                    if (lastChar === '@') {
+                        showSuggestions('');
+                    } else if (val.includes('@')) {
+                        // Get the part after '@' for filtering
+                        const atIndex = val.lastIndexOf('@');
+                        const query = val.slice(atIndex).toLowerCase();
+                        showSuggestions(query);
+                    } else {
+                        $suggestionBox.hide();
+                    }
+                });
+
+                function showSuggestions(query) {
+                    const filtered = keywords.filter(k => k.toLowerCase().startsWith(query));
+                    if (filtered.length === 0) {
+                        $suggestionBox.hide();
+                        return;
+                    }
+                    $suggestionBox.empty();
+                    filtered.forEach(item => {
+                        const $item = $('<div class="suggestion-item"></div>').text(item);
+                        $item.on('click', function() {
+                            selectSuggestion(item);
+                        });
+                        $suggestionBox.append($item);
+                    });
+                    // Position the suggestion box below input
+                    const offset = $input.offset();
+                    $suggestionBox.show();
+                }
+
+                function selectSuggestion(suggestion) {
+                    const val = $input.val();
+                    const atIndex = val.lastIndexOf('@');
+                    const newVal = val.slice(0, atIndex) + suggestion + ' ';
+                    $input.val(newVal);
+                    $suggestionBox.hide();
+                    $input.focus();
+                }
+            });
+
+
+            $('#commandInput').on('change', function() {
+                const command = $(this).val().trim();
+                if (command.startsWith("@generate the chart")) {
+                    // Generate chart
+                } else if (command.startsWith("@create excel")) {
+                    // Create Excel
+                }
+                // Add more commands as needed
+            });
 
 
             // Cleanup function
             $scope.$on('$destroy', function() {
-                // Destroy all chart instances
-                Object.values(chartInstances).forEach(chart => {
-                    if (chart) chart.dispose(); // Use dispose for ECharts
-                });
-                chartInstances = {};
-            });
-        }]
-    };
-});
+                // Destroy all
