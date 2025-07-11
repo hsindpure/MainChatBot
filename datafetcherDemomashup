@@ -1,3 +1,5 @@
+
+I want to fetch all the data from qliksense app,create the qliksense mashup which prints json object of data of qliksense app on web page, write dynamic code, create the qliksense mashup able develop inside the dev-hub environment of qiksense and should use javascript, jquery, html,css , you can use qliksense api, capability APi to fetch data
 <!DOCTYPE html>
 <html>
 <head>
