@@ -1,423 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QlikSense Data Fetcher</title>
+    <title>Qlik Sense Data Mashup</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: #f5f5f5;
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #json-display {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            max-height: 80vh;
+            overflow-y: auto;
+            font-family: monospace;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .input-group {
-            margin-bottom: 20px;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .input-group input {
-            width: 300px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .btn {
-            background: #007bff;
+        button {
+            padding: 10px 15px;
+            background-color: #0088cc;
             color: white;
             border: none;
-            padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
+            margin-bottom: 10px;
         }
-        
-        .btn:hover {
-            background: #0056b3;
-        }
-        
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 4px;
-            display: none;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status.info {
-            background: #cce7ff;
-            color: #004085;
-            border: 1px solid #b8daff;
-        }
-        
-        .json-output {
-            background: #1e1e1e;
-            color: #f8f8f2;
-            padding: 20px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            max-height: 600px;
-            overflow-y: auto;
-            margin-top: 20px;
-        }
-        
+        button:hover { background-color: #005580; }
         .loading {
-            text-align: center;
-            padding: 20px;
             color: #666;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>QlikSense Data Fetcher</h2>
-        
-        <div class="input-group">
-            <label for="appId">App ID:</label>
-            <input type="text" id="appId" placeholder="Enter QlikSense App ID">
-        </div>
-        
-        <button class="btn" id="fetchAllDataBtn" onclick="fetchAllData()">Fetch All Data</button>
-        <button class="btn" id="clearBtn" onclick="clearOutput()">Clear</button>
-        
-        <div class="status" id="statusMessage"></div>
-        
-        <div class="json-output" id="jsonOutput">Click "Fetch All Data" to load QlikSense data...</div>
-    </div>
+    <h1>Qlik Sense Data Export</h1>
+    <button id="fetch-data">Fetch All Data</button>
+    <div id="json-display">Click the button to fetch data...</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
-        // Global variables
-        var app = null;
-        var qlik = null;
-        var isConnected = false;
+        // Configuration - Update with your app ID
+        const APP_ID = "your-app-id"; // Replace with your actual app ID
 
-        // Initialize when page loads
         $(document).ready(function() {
-            loadQlikSenseAPI();
-        });
+            require(["qlik"], function(qlik) {
+                let app;
 
-        function loadQlikSenseAPI() {
-            // Check if running in QlikSense environment
-            if (typeof require !== 'undefined' && typeof config !== 'undefined') {
-                try {
-                    require.config({
-                        baseUrl: (config.isSecure ? "https://" : "http://") + config.host + 
-                                (config.port ? ":" + config.port : "") + config.prefix + "resources"
-                    });
-
-                    require(['js/qlik'], function(qlikAPI) {
-                        qlik = qlikAPI;
-                        isConnected = true;
-                        showStatus('QlikSense API loaded successfully', 'success');
-                    });
-                } catch (error) {
-                    showStatus('Error loading QlikSense API: ' + error.message, 'error');
-                    setupDemoMode();
-                }
-            } else {
-                showStatus('Running in demo mode - QlikSense API not available', 'info');
-                setupDemoMode();
-            }
-        }
-
-        function setupDemoMode() {
-            // Demo data for testing outside QlikSense
-            window.demoData = {
-                appMetadata: {
-                    id: 'demo-app-123',
-                    name: 'Demo Sales Application',
-                    description: 'Sample QlikSense application',
-                    created: '2024-01-01T10:00:00Z',
-                    modified: '2024-01-15T14:30:00Z',
-                    owner: 'demo-user'
-                },
-                objects: [
-                    { id: 'chart-001', type: 'barchart', title: 'Sales by Region', published: true },
-                    { id: 'table-001', type: 'table', title: 'Customer Details', published: true },
-                    { id: 'filter-001', type: 'listbox', title: 'Date Filter', published: false },
-                    { id: 'kpi-001', type: 'kpi', title: 'Total Revenue', published: true }
-                ],
-                fields: [
-                    { name: 'CustomerID', type: 'key', tags: ['$key'] },
-                    { name: 'CustomerName', type: 'text', tags: ['$text'] },
-                    { name: 'Region', type: 'text', tags: ['$text'] },
-                    { name: 'SalesAmount', type: 'numeric', tags: ['$numeric'] },
-                    { name: 'OrderDate', type: 'date', tags: ['$date'] },
-                    { name: 'ProductCategory', type: 'text', tags: ['$text'] }
-                ],
-                dimensions: [
-                    { name: 'Customer Dimension', field: 'CustomerName', grouping: 'N' },
-                    { name: 'Region Dimension', field: 'Region', grouping: 'N' },
-                    { name: 'Date Dimension', field: 'OrderDate', grouping: 'N' },
-                    { name: 'Product Category', field: 'ProductCategory', grouping: 'N' }
-                ],
-                measures: [
-                    { name: 'Total Sales', expression: 'Sum(SalesAmount)', label: 'Total Sales ($)' },
-                    { name: 'Average Sales', expression: 'Avg(SalesAmount)', label: 'Average Sales ($)' },
-                    { name: 'Sales Count', expression: 'Count(SalesAmount)', label: 'Number of Sales' },
-                    { name: 'Max Sales', expression: 'Max(SalesAmount)', label: 'Maximum Sale ($)' }
-                ],
-                hypercubeData: {
-                    dimensions: ['CustomerName', 'Region', 'ProductCategory'],
-                    measures: ['Sum(SalesAmount)', 'Count(SalesAmount)'],
-                    data: [
-                        ['ABC Corp', 'North', 'Electronics', 15000, 5],
-                        ['XYZ Ltd', 'South', 'Clothing', 8500, 3],
-                        ['DEF Inc', 'East', 'Electronics', 12000, 4],
-                        ['GHI Co', 'West', 'Sports', 6200, 2],
-                        ['JKL Partners', 'North', 'Home', 9800, 6],
-                        ['MNO Systems', 'South', 'Electronics', 18500, 7],
-                        ['PQR Industries', 'East', 'Clothing', 11200, 4],
-                        ['STU Enterprises', 'West', 'Sports', 7400, 3],
-                        ['VWX Solutions', 'North', 'Home', 13600, 5],
-                        ['YZA Corp', 'South', 'Electronics', 16800, 6]
-                    ],
-                    totalRecords: 10,
-                    totalPages: 1
-                }
-            };
-        }
-
-        function fetchAllData() {
-            var appId = document.getElementById('appId').value.trim();
-            if (!appId) {
-                showStatus('Please enter an App ID', 'error');
-                return;
-            }
-
-            showLoading();
-            
-            if (qlik && isConnected) {
-                // Real QlikSense API calls
-                connectToApp(appId);
-            } else {
-                // Demo mode
-                setTimeout(function() {
-                    displayData(window.demoData);
-                    showStatus('Demo data loaded successfully', 'success');
-                }, 1500);
-            }
-        }
-
-        function connectToApp(appId) {
-            try {
-                app = qlik.openApp(appId);
-                
-                // Wait for app to be ready then fetch all data
-                app.model.waitForOpen.promise.then(function() {
-                    fetchRealData();
+                // Open Qlik app
+                qlik.openApp(APP_ID).then(function(qlikApp) {
+                    app = qlikApp;
+                    console.log("App opened successfully");
                 }).catch(function(error) {
-                    showStatus('Error connecting to app: ' + error.message, 'error');
-                    document.getElementById('jsonOutput').textContent = 'Error connecting to app';
+                    console.error("Error opening app:", error);
+                    $("#json-display").html(`<span style="color:red">Error: ${error.message}</span>`);
                 });
-            } catch (error) {
-                showStatus('Error opening app: ' + error.message, 'error');
-                document.getElementById('jsonOutput').textContent = 'Error opening app';
-            }
-        }
 
-        function fetchRealData() {
-            var allData = {};
-            var promises = [];
-            
-            // Fetch app metadata
-            promises.push(
-                app.getAppLayout().then(function(layout) {
-                    allData.appMetadata = layout;
-                })
-            );
-            
-            // Fetch all objects
-            promises.push(
-                app.getAppObjectList().then(function(objectList) {
-                    allData.objects = objectList;
-                })
-            );
-            
-            // Fetch all fields
-            promises.push(
-                app.getList('FieldList').then(function(fieldList) {
-                    allData.fields = fieldList.qFieldList ? fieldList.qFieldList.qItems : [];
-                })
-            );
-            
-            // Fetch all dimensions
-            promises.push(
-                app.getList('DimensionList').then(function(dimensionList) {
-                    allData.dimensions = dimensionList.qDimensionList ? dimensionList.qDimensionList.qItems : [];
-                })
-            );
-            
-            // Fetch all measures
-            promises.push(
-                app.getList('MeasureList').then(function(measureList) {
-                    allData.measures = measureList.qMeasureList ? measureList.qMeasureList.qItems : [];
-                })
-            );
-            
-            // Wait for all basic data to be fetched, then fetch hypercube data
-            Promise.all(promises).then(function() {
-                fetchHypercubeData(allData);
-            }).catch(function(error) {
-                showStatus('Error fetching data: ' + error.message, 'error');
-                document.getElementById('jsonOutput').textContent = 'Error fetching data: ' + error.message;
-            });
-        }
+                // Fetch data on button click
+                $("#fetch-data").click(async function() {
+                    try {
+                        $("#json-display").html('<div class="loading">Fetching data...</div>');
+                        const jsonData = await fetchAllData();
+                        $("#json-display").text(JSON.stringify(jsonData, null, 2));
+                    } catch (error) {
+                        console.error("Error fetching data:", error);
+                        $("#json-display").html(`<span style="color:red">Error: ${error.message}</span>`);
+                    }
+                });
 
-        function fetchHypercubeData(allData) {
-            try {
-                // Create a simple hypercube with available dimensions and measures
-                var hypercubeDef = {
-                    qInitialDataFetch: [{
-                        qTop: 0,
-                        qLeft: 0,
-                        qHeight: 100,
-                        qWidth: 10
-                    }],
-                    qDimensions: [],
-                    qMeasures: [],
-                    qSuppressZero: false,
-                    qSuppressMissing: false
-                };
-
-                // Add some dimensions if available
-                if (allData.fields && allData.fields.length > 0) {
-                    var textFields = allData.fields.filter(function(f) {
-                        return f.qTags && f.qTags.indexOf('$text') !== -1;
-                    }).slice(0, 2);
+                // Function to fetch all data
+                async function fetchAllData() {
+                    // Get all fields in the app
+                    const fields = await app.field.get();
                     
-                    textFields.forEach(function(field) {
-                        hypercubeDef.qDimensions.push({
-                            qDef: { qFieldDefs: [field.qName] },
-                            qNullSuppression: false
-                        });
-                    });
-                }
-
-                // Add some measures if available
-                if (allData.fields && allData.fields.length > 0) {
-                    var numericFields = allData.fields.filter(function(f) {
-                        return f.qTags && f.qTags.indexOf('$numeric') !== -1;
-                    }).slice(0, 2);
-                    
-                    numericFields.forEach(function(field) {
-                        hypercubeDef.qMeasures.push({
-                            qDef: { qDef: 'Sum([' + field.qName + '])' },
-                            qLabel: 'Sum of ' + field.qName
-                        });
-                    });
-                }
-
-                // If no measures available, create a simple count measure
-                if (hypercubeDef.qMeasures.length === 0) {
-                    hypercubeDef.qMeasures.push({
-                        qDef: { qDef: 'Count(*)' },
-                        qLabel: 'Total Count'
-                    });
-                }
-
-                app.createCube(hypercubeDef).then(function(cubeObj) {
-                    cubeObj.getLayout().then(function(layout) {
-                        allData.hypercubeData = {
-                            dimensions: layout.qHyperCube.qDimensionInfo.map(function(d) { return d.qFallbackTitle; }),
-                            measures: layout.qHyperCube.qMeasureInfo.map(function(m) { return m.qFallbackTitle; }),
-                            data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : [],
-                            totalRecords: layout.qHyperCube.qSize.qcy,
-                            totalPages: Math.ceil(layout.qHyperCube.qSize.qcy / 100)
-                        };
-                        
-                        displayData(allData);
-                        showStatus('All data fetched successfully', 'success');
-                    });
-                }).catch(function(error) {
-                    allData.hypercubeData = {
-                        error: 'Could not create hypercube: ' + error.message,
-                        dimensions: [],
-                        measures: [],
-                        data: [],
-                        totalRecords: 0
+                    // Create hypercube definition
+                    const hypercubeDef = {
+                        qDimensions: fields.map(field => ({
+                            qDimension: {
+                                qDef: {
+                                    qFieldDefs: [field.qName]
+                                }
+                            }
+                        })),
+                        qMeasures: [],
+                        qInitialDataFetch: [{
+                            qWidth: fields.length,
+                            qHeight: 1000 // Adjust based on your data size
+                        }]
                     };
-                    
-                    displayData(allData);
-                    showStatus('Data fetched with hypercube error', 'info');
-                });
-                
-            } catch (error) {
-                allData.hypercubeData = {
-                    error: 'Hypercube creation failed: ' + error.message,
-                    dimensions: [],
-                    measures: [],
-                    data: [],
-                    totalRecords: 0
-                };
-                
-                displayData(allData);
-                showStatus('Data fetched with hypercube error', 'info');
-            }
-        }
 
-        function displayData(data) {
-            var formattedJson = JSON.stringify(data, null, 2);
-            document.getElementById('jsonOutput').textContent = formattedJson;
-            document.getElementById('fetchAllDataBtn').disabled = false;
-        }
+                    // Create generic object
+                    const genericObject = await app.createGenericObject({
+                        qHyperCubeDef: hypercubeDef
+                    });
 
-        function showLoading() {
-            document.getElementById('jsonOutput').innerHTML = '<div class="loading">Loading all QlikSense data...</div>';
-            document.getElementById('fetchAllDataBtn').disabled = true;
-        }
+                    // Get full hypercube data
+                    const layout = await genericObject.getLayout();
+                    const data = await genericObject.getFullHyperCubeData(
+                        '/qHyperCubeDef', 
+                        layout.qHyperCube.qSize.qcy, 
+                        layout.qHyperCube.qSize.qcx
+                    );
 
-        function showStatus(message, type) {
-            var statusElement = document.getElementById('statusMessage');
-            statusElement.className = 'status ' + type;
-            statusElement.textContent = message;
-            statusElement.style.display = 'block';
-            
-            setTimeout(function() {
-                statusElement.style.display = 'none';
-            }, 5000);
-        }
-
-        function clearOutput() {
-            document.getElementById('jsonOutput').textContent = 'Click "Fetch All Data" to load QlikSense data...';
-            document.getElementById('fetchAllDataBtn').disabled = false;
-        }
+                    // Convert to array of objects
+                    return data.qMatrix.map(row => {
+                        const obj = {};
+                        fields.forEach((field, index) => {
+                            obj[field.qName] = row[index].qText;
+                        });
+                        return obj;
+                    });
+                }
+            });
+        });
     </script>
 </body>
 </html>
