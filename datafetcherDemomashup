@@ -112,8 +112,8 @@
             <input type="text" id="appId" placeholder="Enter QlikSense App ID">
         </div>
         
-        <button class="btn" id="fetchAllDataBtn">Fetch All Data</button>
-        <button class="btn" id="clearBtn">Clear</button>
+        <button class="btn" id="fetchAllDataBtn" onclick="fetchAllData()">Fetch All Data</button>
+        <button class="btn" id="clearBtn" onclick="clearOutput()">Clear</button>
         
         <div class="status" id="statusMessage"></div>
         
@@ -122,283 +122,302 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
-        class QlikSenseDataFetcher {
-            constructor() {
-                this.app = null;
-                this.qlik = null;
-                this.isConnected = false;
-                this.init();
-            }
+        // Global variables
+        var app = null;
+        var qlik = null;
+        var isConnected = false;
 
-            init() {
-                this.setupEventListeners();
-                this.loadQlikSenseAPI();
-            }
+        // Initialize when page loads
+        $(document).ready(function() {
+            loadQlikSenseAPI();
+        });
 
-            setupEventListeners() {
-                $('#fetchAllDataBtn').on('click', () => this.fetchAllData());
-                $('#clearBtn').on('click', () => this.clearOutput());
-            }
-
-            loadQlikSenseAPI() {
-                // Check if running in QlikSense environment
-                if (typeof require !== 'undefined' && typeof config !== 'undefined') {
-                    try {
-                        require.config({
-                            baseUrl: (config.isSecure ? "https://" : "http://") + config.host + 
-                                    (config.port ? ":" + config.port : "") + config.prefix + "resources"
-                        });
-
-                        require(['js/qlik'], (qlik) => {
-                            this.qlik = qlik;
-                            this.isConnected = true;
-                            this.showStatus('QlikSense API loaded successfully', 'success');
-                        });
-                    } catch (error) {
-                        this.showStatus('Error loading QlikSense API: ' + error.message, 'error');
-                        this.setupDemoMode();
-                    }
-                } else {
-                    this.showStatus('Running in demo mode - QlikSense API not available', 'info');
-                    this.setupDemoMode();
-                }
-            }
-
-            setupDemoMode() {
-                // Demo data for testing outside QlikSense
-                this.demoData = {
-                    appMetadata: {
-                        id: 'demo-app-123',
-                        name: 'Demo Sales Application',
-                        description: 'Sample QlikSense application',
-                        created: '2024-01-01T10:00:00Z',
-                        modified: '2024-01-15T14:30:00Z',
-                        owner: 'demo-user'
-                    },
-                    objects: [
-                        { id: 'chart-001', type: 'barchart', title: 'Sales by Region', published: true },
-                        { id: 'table-001', type: 'table', title: 'Customer Details', published: true },
-                        { id: 'filter-001', type: 'listbox', title: 'Date Filter', published: false },
-                        { id: 'kpi-001', type: 'kpi', title: 'Total Revenue', published: true }
-                    ],
-                    fields: [
-                        { name: 'CustomerID', type: 'key', tags: ['$key'] },
-                        { name: 'CustomerName', type: 'text', tags: ['$text'] },
-                        { name: 'Region', type: 'text', tags: ['$text'] },
-                        { name: 'SalesAmount', type: 'numeric', tags: ['$numeric'] },
-                        { name: 'OrderDate', type: 'date', tags: ['$date'] },
-                        { name: 'ProductCategory', type: 'text', tags: ['$text'] }
-                    ],
-                    dimensions: [
-                        { name: 'Customer Dimension', field: 'CustomerName', grouping: 'N' },
-                        { name: 'Region Dimension', field: 'Region', grouping: 'N' },
-                        { name: 'Date Dimension', field: 'OrderDate', grouping: 'N' },
-                        { name: 'Product Category', field: 'ProductCategory', grouping: 'N' }
-                    ],
-                    measures: [
-                        { name: 'Total Sales', expression: 'Sum(SalesAmount)', label: 'Total Sales ($)' },
-                        { name: 'Average Sales', expression: 'Avg(SalesAmount)', label: 'Average Sales ($)' },
-                        { name: 'Sales Count', expression: 'Count(SalesAmount)', label: 'Number of Sales' },
-                        { name: 'Max Sales', expression: 'Max(SalesAmount)', label: 'Maximum Sale ($)' }
-                    ],
-                    hypercubeData: {
-                        dimensions: ['CustomerName', 'Region', 'ProductCategory'],
-                        measures: ['Sum(SalesAmount)', 'Count(SalesAmount)'],
-                        data: [
-                            ['ABC Corp', 'North', 'Electronics', 15000, 5],
-                            ['XYZ Ltd', 'South', 'Clothing', 8500, 3],
-                            ['DEF Inc', 'East', 'Electronics', 12000, 4],
-                            ['GHI Co', 'West', 'Sports', 6200, 2],
-                            ['JKL Partners', 'North', 'Home', 9800, 6],
-                            ['MNO Systems', 'South', 'Electronics', 18500, 7],
-                            ['PQR Industries', 'East', 'Clothing', 11200, 4],
-                            ['STU Enterprises', 'West', 'Sports', 7400, 3],
-                            ['VWX Solutions', 'North', 'Home', 13600, 5],
-                            ['YZA Corp', 'South', 'Electronics', 16800, 6]
-                        ],
-                        totalRecords: 10,
-                        totalPages: 1
-                    }
-                };
-            }
-
-            async fetchAllData() {
-                const appId = $('#appId').val().trim();
-                if (!appId) {
-                    this.showStatus('Please enter an App ID', 'error');
-                    return;
-                }
-
-                this.showLoading();
-                
+        function loadQlikSenseAPI() {
+            // Check if running in QlikSense environment
+            if (typeof require !== 'undefined' && typeof config !== 'undefined') {
                 try {
-                    let allData = {};
-                    
-                    if (this.qlik && this.isConnected) {
-                        // Real QlikSense API calls
-                        await this.connectToApp(appId);
-                        allData = await this.fetchRealData();
-                    } else {
-                        // Demo mode
-                        await this.simulateDelay(1500);
-                        allData = this.demoData;
-                    }
+                    require.config({
+                        baseUrl: (config.isSecure ? "https://" : "http://") + config.host + 
+                                (config.port ? ":" + config.port : "") + config.prefix + "resources"
+                    });
 
-                    this.displayData(allData);
-                    this.showStatus('All data fetched successfully', 'success');
-                    
-                } catch (error) {
-                    this.showStatus('Error fetching data: ' + error.message, 'error');
-                    $('#jsonOutput').text('Error occurred while fetching data');
-                }
-            }
-
-            async connectToApp(appId) {
-                try {
-                    this.app = this.qlik.openApp(appId);
-                    // Wait for app to be ready
-                    await new Promise((resolve, reject) => {
-                        this.app.model.waitForOpen.promise.then(resolve).catch(reject);
+                    require(['js/qlik'], function(qlikAPI) {
+                        qlik = qlikAPI;
+                        isConnected = true;
+                        showStatus('QlikSense API loaded successfully', 'success');
                     });
                 } catch (error) {
-                    throw new Error('Failed to connect to app: ' + error.message);
+                    showStatus('Error loading QlikSense API: ' + error.message, 'error');
+                    setupDemoMode();
                 }
+            } else {
+                showStatus('Running in demo mode - QlikSense API not available', 'info');
+                setupDemoMode();
+            }
+        }
+
+        function setupDemoMode() {
+            // Demo data for testing outside QlikSense
+            window.demoData = {
+                appMetadata: {
+                    id: 'demo-app-123',
+                    name: 'Demo Sales Application',
+                    description: 'Sample QlikSense application',
+                    created: '2024-01-01T10:00:00Z',
+                    modified: '2024-01-15T14:30:00Z',
+                    owner: 'demo-user'
+                },
+                objects: [
+                    { id: 'chart-001', type: 'barchart', title: 'Sales by Region', published: true },
+                    { id: 'table-001', type: 'table', title: 'Customer Details', published: true },
+                    { id: 'filter-001', type: 'listbox', title: 'Date Filter', published: false },
+                    { id: 'kpi-001', type: 'kpi', title: 'Total Revenue', published: true }
+                ],
+                fields: [
+                    { name: 'CustomerID', type: 'key', tags: ['$key'] },
+                    { name: 'CustomerName', type: 'text', tags: ['$text'] },
+                    { name: 'Region', type: 'text', tags: ['$text'] },
+                    { name: 'SalesAmount', type: 'numeric', tags: ['$numeric'] },
+                    { name: 'OrderDate', type: 'date', tags: ['$date'] },
+                    { name: 'ProductCategory', type: 'text', tags: ['$text'] }
+                ],
+                dimensions: [
+                    { name: 'Customer Dimension', field: 'CustomerName', grouping: 'N' },
+                    { name: 'Region Dimension', field: 'Region', grouping: 'N' },
+                    { name: 'Date Dimension', field: 'OrderDate', grouping: 'N' },
+                    { name: 'Product Category', field: 'ProductCategory', grouping: 'N' }
+                ],
+                measures: [
+                    { name: 'Total Sales', expression: 'Sum(SalesAmount)', label: 'Total Sales ($)' },
+                    { name: 'Average Sales', expression: 'Avg(SalesAmount)', label: 'Average Sales ($)' },
+                    { name: 'Sales Count', expression: 'Count(SalesAmount)', label: 'Number of Sales' },
+                    { name: 'Max Sales', expression: 'Max(SalesAmount)', label: 'Maximum Sale ($)' }
+                ],
+                hypercubeData: {
+                    dimensions: ['CustomerName', 'Region', 'ProductCategory'],
+                    measures: ['Sum(SalesAmount)', 'Count(SalesAmount)'],
+                    data: [
+                        ['ABC Corp', 'North', 'Electronics', 15000, 5],
+                        ['XYZ Ltd', 'South', 'Clothing', 8500, 3],
+                        ['DEF Inc', 'East', 'Electronics', 12000, 4],
+                        ['GHI Co', 'West', 'Sports', 6200, 2],
+                        ['JKL Partners', 'North', 'Home', 9800, 6],
+                        ['MNO Systems', 'South', 'Electronics', 18500, 7],
+                        ['PQR Industries', 'East', 'Clothing', 11200, 4],
+                        ['STU Enterprises', 'West', 'Sports', 7400, 3],
+                        ['VWX Solutions', 'North', 'Home', 13600, 5],
+                        ['YZA Corp', 'South', 'Electronics', 16800, 6]
+                    ],
+                    totalRecords: 10,
+                    totalPages: 1
+                }
+            };
+        }
+
+        function fetchAllData() {
+            var appId = document.getElementById('appId').value.trim();
+            if (!appId) {
+                showStatus('Please enter an App ID', 'error');
+                return;
             }
 
-            async fetchRealData() {
-                const allData = {};
+            showLoading();
+            
+            if (qlik && isConnected) {
+                // Real QlikSense API calls
+                connectToApp(appId);
+            } else {
+                // Demo mode
+                setTimeout(function() {
+                    displayData(window.demoData);
+                    showStatus('Demo data loaded successfully', 'success');
+                }, 1500);
+            }
+        }
+
+        function connectToApp(appId) {
+            try {
+                app = qlik.openApp(appId);
                 
-                try {
-                    // Fetch app metadata
-                    allData.appMetadata = await this.app.getAppLayout();
-                    
-                    // Fetch all objects
-                    allData.objects = await this.app.getAppObjectList();
-                    
-                    // Fetch all fields
-                    const fieldList = await this.app.getList('FieldList');
+                // Wait for app to be ready then fetch all data
+                app.model.waitForOpen.promise.then(function() {
+                    fetchRealData();
+                }).catch(function(error) {
+                    showStatus('Error connecting to app: ' + error.message, 'error');
+                    document.getElementById('jsonOutput').textContent = 'Error connecting to app';
+                });
+            } catch (error) {
+                showStatus('Error opening app: ' + error.message, 'error');
+                document.getElementById('jsonOutput').textContent = 'Error opening app';
+            }
+        }
+
+        function fetchRealData() {
+            var allData = {};
+            var promises = [];
+            
+            // Fetch app metadata
+            promises.push(
+                app.getAppLayout().then(function(layout) {
+                    allData.appMetadata = layout;
+                })
+            );
+            
+            // Fetch all objects
+            promises.push(
+                app.getAppObjectList().then(function(objectList) {
+                    allData.objects = objectList;
+                })
+            );
+            
+            // Fetch all fields
+            promises.push(
+                app.getList('FieldList').then(function(fieldList) {
                     allData.fields = fieldList.qFieldList ? fieldList.qFieldList.qItems : [];
-                    
-                    // Fetch all dimensions
-                    const dimensionList = await this.app.getList('DimensionList');
+                })
+            );
+            
+            // Fetch all dimensions
+            promises.push(
+                app.getList('DimensionList').then(function(dimensionList) {
                     allData.dimensions = dimensionList.qDimensionList ? dimensionList.qDimensionList.qItems : [];
-                    
-                    // Fetch all measures
-                    const measureList = await this.app.getList('MeasureList');
+                })
+            );
+            
+            // Fetch all measures
+            promises.push(
+                app.getList('MeasureList').then(function(measureList) {
                     allData.measures = measureList.qMeasureList ? measureList.qMeasureList.qItems : [];
+                })
+            );
+            
+            // Wait for all basic data to be fetched, then fetch hypercube data
+            Promise.all(promises).then(function() {
+                fetchHypercubeData(allData);
+            }).catch(function(error) {
+                showStatus('Error fetching data: ' + error.message, 'error');
+                document.getElementById('jsonOutput').textContent = 'Error fetching data: ' + error.message;
+            });
+        }
+
+        function fetchHypercubeData(allData) {
+            try {
+                // Create a simple hypercube with available dimensions and measures
+                var hypercubeDef = {
+                    qInitialDataFetch: [{
+                        qTop: 0,
+                        qLeft: 0,
+                        qHeight: 100,
+                        qWidth: 10
+                    }],
+                    qDimensions: [],
+                    qMeasures: [],
+                    qSuppressZero: false,
+                    qSuppressMissing: false
+                };
+
+                // Add some dimensions if available
+                if (allData.fields && allData.fields.length > 0) {
+                    var textFields = allData.fields.filter(function(f) {
+                        return f.qTags && f.qTags.indexOf('$text') !== -1;
+                    }).slice(0, 2);
                     
-                    // Fetch hypercube data (create a simple cube with available dimensions and measures)
-                    allData.hypercubeData = await this.fetchHypercubeData();
-                    
-                } catch (error) {
-                    throw new Error('Failed to fetch data: ' + error.message);
-                }
-                
-                return allData;
-            }
-
-            async fetchHypercubeData() {
-                try {
-                    // Create a simple hypercube with first few dimensions and measures
-                    const hypercubeDef = {
-                        qInitialDataFetch: [{
-                            qTop: 0,
-                            qLeft: 0,
-                            qHeight: 100,
-                            qWidth: 10
-                        }],
-                        qDimensions: [],
-                        qMeasures: [],
-                        qSuppressZero: false,
-                        qSuppressMissing: false
-                    };
-
-                    // Add some dimensions if available
-                    const fieldList = await this.app.getList('FieldList');
-                    if (fieldList.qFieldList && fieldList.qFieldList.qItems.length > 0) {
-                        const textFields = fieldList.qFieldList.qItems.filter(f => f.qTags.includes('$text')).slice(0, 2);
-                        textFields.forEach(field => {
-                            hypercubeDef.qDimensions.push({
-                                qDef: { qFieldDefs: [field.qName] },
-                                qNullSuppression: false
-                            });
-                        });
-                    }
-
-                    // Add some measures if available
-                    const numericFields = fieldList.qFieldList ? fieldList.qFieldList.qItems.filter(f => f.qTags.includes('$numeric')).slice(0, 2) : [];
-                    numericFields.forEach(field => {
-                        hypercubeDef.qMeasures.push({
-                            qDef: { qDef: `Sum([${field.qName}])` },
-                            qLabel: `Sum of ${field.qName}`
+                    textFields.forEach(function(field) {
+                        hypercubeDef.qDimensions.push({
+                            qDef: { qFieldDefs: [field.qName] },
+                            qNullSuppression: false
                         });
                     });
+                }
 
-                    // If no fields available, create a simple count measure
-                    if (hypercubeDef.qMeasures.length === 0) {
+                // Add some measures if available
+                if (allData.fields && allData.fields.length > 0) {
+                    var numericFields = allData.fields.filter(function(f) {
+                        return f.qTags && f.qTags.indexOf('$numeric') !== -1;
+                    }).slice(0, 2);
+                    
+                    numericFields.forEach(function(field) {
                         hypercubeDef.qMeasures.push({
-                            qDef: { qDef: 'Count(*)' },
-                            qLabel: 'Total Count'
+                            qDef: { qDef: 'Sum([' + field.qName + '])' },
+                            qLabel: 'Sum of ' + field.qName
                         });
-                    }
+                    });
+                }
 
-                    const cubeObj = await this.app.createCube(hypercubeDef);
-                    const layout = await cubeObj.getLayout();
-                    
-                    return {
-                        dimensions: layout.qHyperCube.qDimensionInfo.map(d => d.qFallbackTitle),
-                        measures: layout.qHyperCube.qMeasureInfo.map(m => m.qFallbackTitle),
-                        data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : [],
-                        totalRecords: layout.qHyperCube.qSize.qcy,
-                        totalPages: Math.ceil(layout.qHyperCube.qSize.qcy / 100)
-                    };
-                    
-                } catch (error) {
-                    return {
+                // If no measures available, create a simple count measure
+                if (hypercubeDef.qMeasures.length === 0) {
+                    hypercubeDef.qMeasures.push({
+                        qDef: { qDef: 'Count(*)' },
+                        qLabel: 'Total Count'
+                    });
+                }
+
+                app.createCube(hypercubeDef).then(function(cubeObj) {
+                    cubeObj.getLayout().then(function(layout) {
+                        allData.hypercubeData = {
+                            dimensions: layout.qHyperCube.qDimensionInfo.map(function(d) { return d.qFallbackTitle; }),
+                            measures: layout.qHyperCube.qMeasureInfo.map(function(m) { return m.qFallbackTitle; }),
+                            data: layout.qHyperCube.qDataPages[0] ? layout.qHyperCube.qDataPages[0].qMatrix : [],
+                            totalRecords: layout.qHyperCube.qSize.qcy,
+                            totalPages: Math.ceil(layout.qHyperCube.qSize.qcy / 100)
+                        };
+                        
+                        displayData(allData);
+                        showStatus('All data fetched successfully', 'success');
+                    });
+                }).catch(function(error) {
+                    allData.hypercubeData = {
                         error: 'Could not create hypercube: ' + error.message,
                         dimensions: [],
                         measures: [],
                         data: [],
                         totalRecords: 0
                     };
-                }
-            }
-
-            async simulateDelay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            }
-
-            displayData(data) {
-                const formattedJson = JSON.stringify(data, null, 2);
-                $('#jsonOutput').text(formattedJson);
-            }
-
-            showLoading() {
-                $('#jsonOutput').html('<div class="loading">Loading all QlikSense data...</div>');
-                $('#fetchAllDataBtn').prop('disabled', true);
-            }
-
-            showStatus(message, type) {
-                const statusElement = $('#statusMessage');
-                statusElement.removeClass('success error info').addClass(type);
-                statusElement.text(message);
-                statusElement.show();
+                    
+                    displayData(allData);
+                    showStatus('Data fetched with hypercube error', 'info');
+                });
                 
-                setTimeout(() => {
-                    statusElement.fadeOut();
-                }, 5000);
-            }
-
-            clearOutput() {
-                $('#jsonOutput').text('Click "Fetch All Data" to load QlikSense data...');
-                $('#fetchAllDataBtn').prop('disabled', false);
+            } catch (error) {
+                allData.hypercubeData = {
+                    error: 'Hypercube creation failed: ' + error.message,
+                    dimensions: [],
+                    measures: [],
+                    data: [],
+                    totalRecords: 0
+                };
+                
+                displayData(allData);
+                showStatus('Data fetched with hypercube error', 'info');
             }
         }
 
-        // Initialize when document is ready
-        $(document).ready(function() {
-            new QlikSenseDataFetcher();
-        });
+        function displayData(data) {
+            var formattedJson = JSON.stringify(data, null, 2);
+            document.getElementById('jsonOutput').textContent = formattedJson;
+            document.getElementById('fetchAllDataBtn').disabled = false;
+        }
+
+        function showLoading() {
+            document.getElementById('jsonOutput').innerHTML = '<div class="loading">Loading all QlikSense data...</div>';
+            document.getElementById('fetchAllDataBtn').disabled = true;
+        }
+
+        function showStatus(message, type) {
+            var statusElement = document.getElementById('statusMessage');
+            statusElement.className = 'status ' + type;
+            statusElement.textContent = message;
+            statusElement.style.display = 'block';
+            
+            setTimeout(function() {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function clearOutput() {
+            document.getElementById('jsonOutput').textContent = 'Click "Fetch All Data" to load QlikSense data...';
+            document.getElementById('fetchAllDataBtn').disabled = false;
+        }
     </script>
 </body>
 </html>
