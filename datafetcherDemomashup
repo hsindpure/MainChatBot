@@ -28,6 +28,10 @@
             color: #666;
             font-style: italic;
         }
+        .error {
+            color: #d9534f;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -49,7 +53,7 @@
                     console.log("App opened successfully");
                 }).catch(function(error) {
                     console.error("Error opening app:", error);
-                    $("#json-display").html(`<span style="color:red">Error: ${error.message}</span>`);
+                    $("#json-display").html(`<div class="error">Error: ${error.message}</div>`);
                 });
 
                 // Fetch data on button click
@@ -60,52 +64,64 @@
                         $("#json-display").text(JSON.stringify(jsonData, null, 2));
                     } catch (error) {
                         console.error("Error fetching data:", error);
-                        $("#json-display").html(`<span style="color:red">Error: ${error.message}</span>`);
+                        $("#json-display").html(`<div class="error">Error: ${error.message}</div>`);
                     }
                 });
 
                 // Function to fetch all data
                 async function fetchAllData() {
-                    // Get all fields in the app
-                    const fields = await app.field.get();
-                    
-                    // Create hypercube definition
-                    const hypercubeDef = {
-                        qDimensions: fields.map(field => ({
-                            qDimension: {
-                                qDef: {
-                                    qFieldDefs: [field.qName]
+                    try {
+                        // Get all fields in the app using the current API
+                        const fieldList = await app.getList("field");
+                        const fieldNames = fieldList.qFieldList.qItems.map(item => item.qName);
+                        
+                        if (fieldNames.length === 0) {
+                            throw new Error("No fields found in the app");
+                        }
+
+                        console.log("Found fields:", fieldNames);
+
+                        // Create hypercube definition
+                        const hypercubeDef = {
+                            qDimensions: fieldNames.map(field => ({
+                                qDimension: {
+                                    qDef: {
+                                        qFieldDefs: [field]
+                                    }
                                 }
-                            }
-                        })),
-                        qMeasures: [],
-                        qInitialDataFetch: [{
-                            qWidth: fields.length,
-                            qHeight: 1000 // Adjust based on your data size
-                        }]
-                    };
+                            })),
+                            qMeasures: [],
+                            qInitialDataFetch: [{
+                                qWidth: fieldNames.length,
+                                qHeight: 1000 // Adjust based on your data size
+                            }]
+                        };
 
-                    // Create generic object
-                    const genericObject = await app.createGenericObject({
-                        qHyperCubeDef: hypercubeDef
-                    });
-
-                    // Get full hypercube data
-                    const layout = await genericObject.getLayout();
-                    const data = await genericObject.getFullHyperCubeData(
-                        '/qHyperCubeDef', 
-                        layout.qHyperCube.qSize.qcy, 
-                        layout.qHyperCube.qSize.qcx
-                    );
-
-                    // Convert to array of objects
-                    return data.qMatrix.map(row => {
-                        const obj = {};
-                        fields.forEach((field, index) => {
-                            obj[field.qName] = row[index].qText;
+                        // Create generic object
+                        const genericObject = await app.createGenericObject({
+                            qHyperCubeDef: hypercubeDef
                         });
-                        return obj;
-                    });
+
+                        // Get full hypercube data
+                        const layout = await genericObject.getLayout();
+                        const data = await genericObject.getFullHyperCubeData(
+                            '/qHyperCubeDef', 
+                            layout.qHyperCube.qSize.qcy, 
+                            layout.qHyperCube.qSize.qcx
+                        );
+
+                        // Convert to array of objects
+                        return data.qMatrix.map(row => {
+                            const obj = {};
+                            fieldNames.forEach((field, index) => {
+                                obj[field] = row[index].qText;
+                            });
+                            return obj;
+                        });
+                    } catch (error) {
+                        console.error("Error in fetchAllData:", error);
+                        throw error;
+                    }
                 }
             });
         });
